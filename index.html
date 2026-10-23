@@ -1,14 +1,16 @@
+Додаток AI Web App Studio з повним збереженням історії сесій, ітеративним редагуванням коду та iOS-дизайном готовий і вже працює у вікні перегляду!
+Якщо ви хочете відкрити його у власному браузері чи завантажити як автономний файл:
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="uk" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gemini 3 Web App Studio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AI Web App Studio iOS</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Highlight.js for Code Viewer -->
+    <!-- Highlight.js -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/xml.min.js"></script>
@@ -19,465 +21,504 @@
             theme: {
                 extend: {
                     colors: {
-                        ios: {
-                            bg: '#000000',
-                            card: 'rgba(28, 28, 30, 0.75)',
-                            border: 'rgba(255, 255, 255, 0.12)',
-                            blue: '#0A84FF',
-                            green: '#30D158',
-                            red: '#FF453A',
-                            gray: '#8E8E93',
-                            lightBg: '#F2F2F7',
-                            lightCard: 'rgba(255, 255, 255, 0.8)'
-                        }
+                        iosBg: '#000000',
+                        iosCard: '#1c1c1e',
+                        iosCardSecondary: '#2c2c2e',
+                        iosBlue: '#0a84ff',
+                        iosGreen: '#30d158',
+                        iosRed: '#ff453a'
                     }
                 }
             }
         }
     </script>
     <style>
-        /* Custom iOS Glassmorphism and Scrollbar tweaks */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
-            background-color: #000;
-            color: #fff;
-            user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
-        .glass {
-            background: rgba(28, 28, 30, 0.75);
+        ::-webkit-scrollbar { width: 0px; height: 0px; }
+        .backdrop-blur-ios {
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-        }
-        .glass-input {
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-        }
-        .glass-input:focus {
-            border-color: #0A84FF;
-            outline: none;
-        }
-        /* Hide scrollbars for clean iOS look */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
         }
     </style>
 </head>
-<body class="h-screen w-screen overflow-hidden flex items-center justify-center bg-zinc-950 text-white">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-0 md:p-6 overflow-hidden">
 
-    <!-- Mobile Screen Frame Container -->
-    <div id="phone-frame" class="relative w-full h-full sm:max-w-[420px] sm:h-[880px] sm:rounded-[50px] sm:border-[8px] sm:border-zinc-800 bg-black flex flex-col overflow-hidden shadow-2xl transition-all duration-300">
+    <!-- Mockup Container (iPhone Frame on Desktop, Native Fullscreen on Mobile) -->
+    <div class="w-full max-w-md h-[100vh] md:h-[844px] bg-black md:rounded-[50px] shadow-2xl border-0 md:border-[10px] md:border-slate-800 flex flex-col relative overflow-hidden">
         
-        <!-- iOS Dynamic Island -->
-        <div class="relative w-full pt-3 pb-1 flex justify-center items-center z-50 select-none">
-            <div id="dynamic-island" class="w-28 h-7 bg-black rounded-full border border-zinc-800/60 flex items-center justify-between px-3 transition-all duration-300">
-                <div class="w-2.5 h-2.5 rounded-full bg-zinc-900 flex items-center justify-center">
-                    <div class="w-1 h-1 rounded-full bg-blue-500 animate-pulse"></div>
-                </div>
-                <div id="island-status" class="text-[10px] text-zinc-400 font-medium truncate max-w-[100px]">Готовий</div>
+        <!-- iPhone Top Notch / Dynamic Island -->
+        <div class="hidden md:flex justify-center pt-2 pb-1 z-50 bg-black shrink-0">
+            <div class="w-28 h-6 bg-slate-900 rounded-full flex items-center justify-between px-3">
+                <div class="w-2.5 h-2.5 rounded-full bg-slate-950"></div>
+                <div class="w-3 h-3 rounded-full bg-indigo-950 border border-indigo-900"></div>
             </div>
         </div>
 
-        <!-- iOS Top Header Bar -->
-        <div class="px-5 py-2 flex items-center justify-between border-b border-white/10 glass z-40">
-            <div class="flex items-center gap-2">
-                <i class="fa-solid font-bold text-lg bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Gemini Studio</i>
+        <!-- App Header Bar -->
+        <header class="h-12 bg-black/80 backdrop-blur-ios border-b border-white/10 px-4 flex items-center justify-between shrink-0 z-40">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-wand-magic-sparkles text-iosBlue text-sm"></i>
+                <h1 class="font-semibold text-sm text-white tracking-tight" id="headerTitle">Нова сесія</h1>
             </div>
-            <!-- New Session / Reset Button -->
-            <button onclick="startNewSession()" class="px-3 py-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-semibold border border-red-500/30 transition flex items-center gap-1.5 active:scale-95">
-                <i class="fa-solid fa-rotate-right text-[10px]"></i>
-                <span>Нова сесія</span>
-            </button>
-        </div>
-
-        <!-- TAB CONTENT CONTAINER -->
-        <div class="flex-1 relative overflow-hidden">
-
-            <!-- TAB 1: GENERATOR / CHAT -->
-            <div id="tab-generator" class="tab-page absolute inset-0 flex flex-col p-4 space-y-3 overflow-hidden">
-                <!-- Chat Message List -->
-                <div id="chat-list" class="flex-1 overflow-y-auto space-y-3 pr-1 no-scrollbar">
-                    <div class="glass p-3.5 rounded-2xl border border-white/10 text-sm leading-relaxed text-zinc-300">
-                        <div class="flex items-center gap-2 mb-1 text-xs text-blue-400 font-semibold">
-                            <i class="fa-solid fa-sparkles"></i> AI Асистент
-                        </div>
-                        Вітаю! Я збережу контекст нашої розмови. Опишіть веб-додаток, і ми будемо вдосконалювати його крок за кроком в цій сесії!
-                    </div>
-                </div>
-
-                <!-- Input Box Area -->
-                <div class="glass p-2.5 rounded-2xl flex flex-col gap-2 border border-white/10">
-                    <textarea id="prompt-input" rows="2" placeholder="Опишіть додаток або правки..." class="glass-input w-full p-2.5 rounded-xl text-sm text-white placeholder-zinc-500 resize-none no-scrollbar"></textarea>
-                    <div class="flex items-center justify-between">
-                        <div class="text-[11px] text-zinc-400 flex items-center gap-1">
-                            <span id="active-key-indicator" class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
-                            <span id="active-model-name" class="truncate max-w-[140px]">gemini-3.8-flash</span>
-                        </div>
-                        <button onclick="generateOrUpdateApp()" id="send-btn" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs flex items-center gap-1.5 transition active:scale-95 shadow-lg shadow-blue-600/30">
-                            <span>Надіслати</span>
-                            <i class="fa-solid fa-paper-plane text-[10px]"></i>
-                        </button>
-                    </div>
-                </div>
+            
+            <div class="flex items-center space-x-2">
+                <button onclick="createNewSession()" class="bg-iosBlue hover:bg-blue-600 text-white px-2.5 py-1 rounded-full text-[11px] font-medium transition flex items-center space-x-1">
+                    <i class="fa-solid fa-plus text-[10px]"></i>
+                    <span>Нова</span>
+                </button>
             </div>
+        </header>
 
-            <!-- TAB 2: SANDBOX / PREVIEW -->
-            <div id="tab-sandbox" class="tab-page absolute inset-0 hidden flex-col bg-white">
-                <div class="p-2 bg-zinc-900 border-b border-white/10 flex items-center justify-between text-xs">
-                    <div class="flex items-center gap-2 text-zinc-400">
-                        <span class="w-2 h-2 rounded-full bg-green-500"></span>
-                        <span>Інтерактивний Sandbox</span>
+        <!-- Dynamic Content Body -->
+        <main class="flex-1 relative overflow-hidden bg-black">
+            
+            <!-- VIEW 1: GENERATOR (CHAT) -->
+            <div id="viewChat" class="absolute inset-0 flex flex-col z-10">
+                <!-- Session Context Banner -->
+                <div class="bg-iosCardSecondary/80 border-b border-white/5 px-3 py-1.5 text-[11px] flex justify-between items-center text-slate-400">
+                    <div class="flex items-center space-x-1.5">
+                        <i class="fa-solid fa-layer-group text-iosBlue"></i>
+                        <span id="sessionStatusLabel" class="truncate max-w-[200px]">Проект не збережено</span>
                     </div>
-                    <button onclick="reloadPreview()" class="px-2.5 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 active:scale-95 text-[11px]">
-                        <i class="fa-solid fa-rotate-right mr-1"></i>Оновити
-                    </button>
-                </div>
-                <iframe id="preview-frame" class="w-full flex-1 border-none bg-white" title="App Preview"></iframe>
-            </div>
-
-            <!-- TAB 3: CODE VIEWER -->
-            <div id="tab-code" class="tab-page absolute inset-0 hidden flex-col bg-zinc-950">
-                <div class="p-2.5 glass border-b border-white/10 flex items-center justify-between">
-                    <span class="text-xs text-zinc-400 font-mono">index.html</span>
-                    <div class="flex gap-2">
-                        <button onclick="copyCode()" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-white/10 active:scale-95">
-                            <i class="fa-regular fa-copy mr-1"></i>Копіювати
-                        </button>
-                        <button onclick="downloadCode()" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium active:scale-95 shadow">
-                            <i class="fa-solid fa-download mr-1"></i>Скачати
-                        </button>
-                    </div>
-                </div>
-                <div class="flex-1 overflow-auto p-3 no-scrollbar font-mono text-xs">
-                    <pre><code id="code-block" class="language-html text-zinc-300"><!-- Код буде відображено тут --></code></pre>
-                </div>
-            </div>
-
-            <!-- TAB 4: KEYS & SETTINGS -->
-            <div id="tab-settings" class="tab-page absolute inset-0 hidden flex-col p-4 space-y-4 overflow-y-auto no-scrollbar">
-                <div class="glass p-4 rounded-2xl border border-white/10 space-y-3">
-                    <h3 class="text-sm font-semibold text-zinc-200 flex items-center gap-2">
-                        <i class="fa-solid fa-microchip text-blue-400"></i> Модель Gemini
-                    </h3>
-                    <select id="model-select" onchange="updateModelSelection()" class="glass-input w-full p-2.5 rounded-xl text-xs text-white bg-zinc-900 border-white/15">
-                        <option value="gemini-3.8-flash">gemini-3.8-flash (Рекомендована)</option>
-                        <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Швидка)</option>
-                        <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview (Потужна)</option>
+                    <select id="modelSelect" class="bg-black/50 text-slate-200 border border-white/10 rounded px-1.5 py-0.5 font-mono text-[10px] outline-none">
+                        <option value="gemini-3.8-flash" selected>gemini-3.8-flash</option>
+                        <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite</option>
+                        <option value="gemini-3.1-pro-preview">gemini-3.1-pro</option>
                     </select>
                 </div>
 
-                <div class="glass p-4 rounded-2xl border border-white/10 space-y-3">
-                    <h3 class="text-sm font-semibold text-zinc-200 flex items-center gap-2">
-                        <i class="fa-solid fa-key text-amber-400"></i> Ключі Gemini API (до 5)
-                    </h3>
-                    <div id="key-inputs-list" class="space-y-2">
-                        <!-- Key Inputs Dynamic Generation -->
+                <!-- Chat History Window -->
+                <div id="chatMessages" class="flex-1 overflow-y-auto p-3 space-y-3">
+                    <div class="bg-iosCard border border-white/5 rounded-2xl p-3 text-xs text-slate-300 space-y-2">
+                        <div class="font-semibold text-iosBlue flex items-center space-x-1.5">
+                            <i class="fa-solid fa-robot"></i>
+                            <span>ШІ Контекст-Асистент</span>
+                        </div>
+                        <p class="text-slate-400 text-[11px]">Опишіть додаток. Усі наступні підказки в цій сесії будуть <b>вносити зміни в той самий код</b>, доки ви не натиснете «Нова».</p>
+                        <div class="flex flex-wrap gap-1 pt-1">
+                            <button onclick="setTemplate('Створи Калькулятор грошей з збереженням у LocalStorage')" class="bg-iosCardSecondary hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full text-[10px]">📊 Калькулятор</button>
+                            <button onclick="setTemplate('Створи гру Змейка з кнопками керування для смартфона')" class="bg-iosCardSecondary hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full text-[10px]">🎮 Змейка</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Form -->
+                <div class="p-3 bg-iosCard/90 border-t border-white/10 backdrop-blur-ios">
+                    <form onsubmit="handleSendPrompt(event)" class="space-y-2">
+                        <div class="relative">
+                            <textarea id="promptInput" rows="2" placeholder="Опишіть додаток або вкажіть правки..." class="w-full bg-iosCardSecondary text-white placeholder-slate-500 rounded-xl p-2.5 border border-white/10 text-xs outline-none focus:border-iosBlue resize-none"></textarea>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span id="statusLabel" class="text-[10px] text-slate-400 font-mono">Готово</span>
+                            <button type="submit" id="sendBtn" class="bg-iosBlue hover:bg-blue-600 text-white font-medium px-3.5 py-1.5 rounded-full text-xs transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-arrow-up text-xs"></i>
+                                <span>Надіслати</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- VIEW 2: SANDBOX (PREVIEW) -->
+            <div id="viewPreview" class="absolute inset-0 flex flex-col z-0 hidden bg-white">
+                <div class="h-8 bg-slate-900 border-b border-slate-800 flex justify-between items-center px-3 text-xs text-slate-300">
+                    <span class="text-[11px] font-mono text-emerald-400 flex items-center space-x-1">
+                        <i class="fa-solid fa-circle text-[8px] animate-pulse"></i>
+                        <span>Live Sandbox</span>
+                    </span>
+                    <button onclick="reloadIframe()" class="hover:text-white"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+                <iframe id="sandboxIframe" class="w-full flex-1 border-0 bg-white" sandbox="allow-scripts allow-modals allow-forms allow-same-origin"></iframe>
+            </div>
+
+            <!-- VIEW 3: CODE VIEW -->
+            <div id="viewCode" class="absolute inset-0 flex flex-col z-0 hidden bg-slate-950">
+                <div class="p-2 bg-iosCard border-b border-white/10 flex justify-between items-center">
+                    <span class="text-xs text-slate-400 font-mono">index.html</span>
+                    <div class="flex space-x-2">
+                        <button onclick="copyCode()" class="bg-iosCardSecondary hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-lg text-xs flex items-center space-x-1">
+                            <i class="fa-solid fa-copy"></i>
+                            <span>Копіювати</span>
+                        </button>
+                        <button onclick="downloadCode()" class="bg-iosBlue hover:bg-blue-600 text-white px-2.5 py-1 rounded-lg text-xs flex items-center space-x-1">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Завантажити</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex-1 overflow-auto p-3 text-[11px] font-mono">
+                    <pre><code id="codeViewer" class="language-xml"><!-- Код з'явиться тут --></code></pre>
+                </div>
+            </div>
+
+            <!-- VIEW 4: SESSIONS (PREVIOUS SESSIONS) -->
+            <div id="viewSessions" class="absolute inset-0 flex flex-col z-0 hidden bg-black p-3 overflow-y-auto">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Збережені сесії</h2>
+                    <span class="text-[10px] text-slate-500">Видалення лише вручну</span>
+                </div>
+                <div id="sessionsList" class="space-y-2">
+                    <!-- Dynamic sessions item list -->
+                </div>
+            </div>
+
+            <!-- VIEW 5: SETTINGS (API KEYS) -->
+            <div id="viewSettings" class="absolute inset-0 flex flex-col z-0 hidden bg-black p-4 overflow-y-auto">
+                <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">API Ключі Gemini (до 5 шт)</h2>
+                <div class="space-y-3 text-xs">
+                    <div class="bg-iosCard border border-white/10 rounded-xl p-3 space-y-2">
+                        <label class="block text-slate-300">Активний ключ:</label>
+                        <select id="activeKeySelect" onchange="switchActiveKeyIndex(this.value)" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono outline-none">
+                            <option value="0">Ключ #1</option>
+                            <option value="1">Ключ #2</option>
+                            <option value="2">Ключ #3</option>
+                            <option value="3">Ключ #4</option>
+                            <option value="4">Ключ #5</option>
+                        </select>
+                    </div>
+
+                    <div class="bg-iosCard border border-white/10 rounded-xl p-3 space-y-2">
+                        <span class="text-slate-400 text-[11px] block">Введіть ваші Gemini API keys:</span>
+                        <input type="password" id="key0" placeholder="API Key 1" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
+                        <input type="password" id="key1" placeholder="API Key 2" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
+                        <input type="password" id="key2" placeholder="API Key 3" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
+                        <input type="password" id="key3" placeholder="API Key 4" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
+                        <input type="password" id="key4" placeholder="API Key 5" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
+                        
+                        <button onclick="saveApiKeys()" class="w-full bg-iosBlue hover:bg-blue-600 text-white py-2 rounded-lg font-medium transition mt-2">
+                            Зберегти ключі
+                        </button>
                     </div>
                 </div>
             </div>
 
-        </div>
+        </main>
 
-        <!-- iOS Bottom Tab Bar Navigation -->
-        <div class="px-4 py-2 border-t border-white/10 glass flex justify-around items-center z-40">
-            <button onclick="switchTab('generator')" id="nav-generator" class="nav-btn flex flex-col items-center gap-1 text-blue-400">
-                <i class="fa-solid fa-wand-magic-sparkles text-lg"></i>
-                <span class="text-[10px] font-medium">Студія</span>
+        <!-- Bottom iOS Tab Bar -->
+        <nav class="h-16 bg-iosCard/90 backdrop-blur-ios border-t border-white/10 flex justify-around items-center shrink-0 z-40 px-1">
+            <button onclick="switchTab('chat')" id="navChat" class="flex flex-col items-center justify-center w-full h-full text-iosBlue">
+                <i class="fa-solid fa-message text-base mb-0.5"></i>
+                <span class="text-[10px] font-medium">Чат</span>
             </button>
-            <button onclick="switchTab('sandbox')" id="nav-sandbox" class="nav-btn flex flex-col items-center gap-1 text-zinc-500">
-                <i class="fa-solid fa-play text-lg"></i>
-                <span class="text-[10px] font-medium">Прев'ю</span>
+            <button onclick="switchTab('preview')" id="navPreview" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300">
+                <i class="fa-solid fa-play text-base mb-0.5"></i>
+                <span class="text-[10px] font-medium">Пісочниця</span>
             </button>
-            <button onclick="switchTab('code')" id="nav-code" class="nav-btn flex flex-col items-center gap-1 text-zinc-500">
-                <i class="fa-solid fa-code text-lg"></i>
+            <button onclick="switchTab('code')" id="navCode" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300">
+                <i class="fa-solid fa-code text-base mb-0.5"></i>
                 <span class="text-[10px] font-medium">Код</span>
             </button>
-            <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center gap-1 text-zinc-500">
-                <i class="fa-solid fa-sliders text-lg"></i>
-                <span class="text-[10px] font-medium">Налаштування</span>
+            <button onclick="switchTab('sessions')" id="navSessions" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300">
+                <i class="fa-solid fa-box-archive text-base mb-0.5"></i>
+                <span class="text-[10px] font-medium">Сесії</span>
             </button>
+            <button onclick="switchTab('settings')" id="navSettings" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300">
+                <i class="fa-solid fa-gear text-base mb-0.5"></i>
+                <span class="text-[10px] font-medium">Ключі</span>
+            </button>
+        </nav>
+
+        <!-- iPhone Home Bar Indicator -->
+        <div class="hidden md:flex justify-center pb-1 bg-black shrink-0">
+            <div class="w-32 h-1 bg-slate-700 rounded-full"></div>
         </div>
 
     </div>
 
+    <!-- Application Script -->
     <script>
-        // --- APP STATE ---
-        let currentCode = "";
-        let chatHistory = [];
-        let apiKeys = ["", "", "", "", ""];
+        let apiKeys = ['', '', '', '', ''];
         let activeKeyIndex = 0;
-        let selectedModel = "gemini-3.8-flash";
+        let sessions = []; // Persistent sessions list
+        let currentSessionId = null;
 
-        // System prompt ensuring continuity and contextual modifications
-        const SYSTEM_PROMPT = `Ви досвідчений веб-розробник. Ваше завдання — створювати або редагувати однофайлові веб-додатки (HTML + Tailwind CSS + JS).
-ЯКЩО КОД ВЖЕ ІСНУЄ: Вносьте правки, виправлення або доповнення користувача безпосередньо в існуючий код, зберігаючи робочу логіку та стилі.
-ОБОВ'ЯЗКОВО повертайте ПОВНИЙ оновлений код веб-додатка від початку до кінця в одному файлі index.html у форматованому блоці \`\`\`html ... \`\`\` чи у чистому HTML без зайвого пояснювального тексту.`;
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', () => {
+            loadApiKeys();
+            loadSessions();
+            if (sessions.length > 0) {
+                loadSession(sessions[0].id);
+            } else {
+                createNewSession();
+            }
+        });
 
-        // --- INIT ---
-        window.onload = () => {
-            loadSettings();
-            renderKeyInputs();
-            updatePreview();
-        };
-
-        // --- NAVIGATION ---
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-page').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.nav-btn').forEach(el => {
-                el.classList.remove('text-blue-400');
-                el.classList.add('text-zinc-500');
-            });
-
-            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-            document.getElementById(`tab-${tabId}`).classList.add('flex');
-            
-            const activeNav = document.getElementById(`nav-${tabId}`);
-            activeNav.classList.remove('text-zinc-500');
-            activeNav.classList.add('text-blue-400');
-
-            if (tabId === 'code') {
-                renderCodeViewer();
+        function loadApiKeys() {
+            const saved = localStorage.getItem('gemini_ios_keys');
+            if (saved) {
+                try {
+                    apiKeys = JSON.parse(saved);
+                    for(let i=0; i<5; i++) {
+                        const input = document.getElementById(`key${i}`);
+                        if(input && apiKeys[i]) input.value = apiKeys[i];
+                    }
+                } catch(e){}
+            }
+            const activeIdx = localStorage.getItem('gemini_ios_active_key');
+            if(activeIdx !== null) {
+                activeKeyIndex = parseInt(activeIdx, 10);
+                document.getElementById('activeKeySelect').value = activeKeyIndex;
             }
         }
 
-        // --- NEW SESSION (RESET CONTEXT) ---
-        function startNewSession() {
-            if (chatHistory.length > 0 || currentCode !== "") {
-                chatHistory = [];
-                currentCode = "";
-                
-                // Clear UI Chat
-                const chatList = document.getElementById('chat-list');
-                chatList.innerHTML = `
-                    <div class="glass p-3.5 rounded-2xl border border-white/10 text-sm leading-relaxed text-zinc-300">
-                        <div class="flex items-center gap-2 mb-1 text-xs text-blue-400 font-semibold">
-                            <i class="fa-solid fa-sparkles"></i> AI Асистент
-                        </div>
-                        Розпочато нову сесію! Контекст і попередній код очищено. Введіть новий запит для створення нового додатка.
+        function saveApiKeys() {
+            for(let i=0; i<5; i++) {
+                apiKeys[i] = document.getElementById(`key${i}`).value.trim();
+            }
+            localStorage.setItem('gemini_ios_keys', JSON.stringify(apiKeys));
+            setStatus('Ключі збережено');
+            alert('API ключі збережено!');
+        }
+
+        function switchActiveKeyIndex(val) {
+            activeKeyIndex = parseInt(val, 10);
+            localStorage.setItem('gemini_ios_active_key', activeKeyIndex);
+            setStatus(`Активний Ключ #${activeKeyIndex + 1}`);
+        }
+
+        function loadSessions() {
+            const saved = localStorage.getItem('gemini_ios_sessions');
+            if (saved) {
+                try {
+                    sessions = JSON.parse(saved);
+                } catch(e) { sessions = []; }
+            }
+            renderSessionsList();
+        }
+
+        function saveSessions() {
+            localStorage.setItem('gemini_ios_sessions', JSON.stringify(sessions));
+            renderSessionsList();
+        }
+
+        function createNewSession() {
+            const newId = 'session_' + Date.now();
+            const newSession = {
+                id: newId,
+                title: 'Новий проект (' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ')',
+                code: '',
+                history: []
+            };
+            sessions.unshift(newSession);
+            saveSessions();
+            loadSession(newId);
+            switchTab('chat');
+        }
+
+        function loadSession(id) {
+            currentSessionId = id;
+            const session = sessions.find(s => s.id === id);
+            if (!session) return;
+
+            document.getElementById('headerTitle').innerText = session.title;
+            document.getElementById('sessionStatusLabel').innerText = session.title;
+
+            // Render Messages
+            const chatBox = document.getElementById('chatMessages');
+            chatBox.innerHTML = `
+                <div class="bg-iosCard border border-white/5 rounded-2xl p-3 text-xs text-slate-300 space-y-2">
+                    <div class="font-semibold text-iosBlue flex items-center space-x-1.5">
+                        <i class="fa-solid fa-robot"></i>
+                        <span>ШІ Контекст-Асистент</span>
                     </div>
-                `;
-                
-                updatePreview();
-                renderCodeViewer();
-                updateIsland("Новий проект", "bg-blue-500");
+                    <p class="text-slate-400 text-[11px]">Ви розробляєте: <b>${session.title}</b>. Кожен запит вносить правки в поточний код.</p>
+                </div>
+            `;
+
+            session.history.forEach(m => appendMessageUI(m.role, m.text));
+            updateSandboxAndCode(session.code);
+            renderSessionsList();
+        }
+
+        function deleteSession(id, e) {
+            e.stopPropagation();
+            if (!confirm('Видалити цю сесію безповоротно?')) return;
+            sessions = sessions.filter(s => s.id !== id);
+            saveSessions();
+            if (currentSessionId === id) {
+                if (sessions.length > 0) loadSession(sessions[0].id);
+                else createNewSession();
             }
         }
 
-        // --- API & GENERATION LOGIC ---
-        async function generateOrUpdateApp() {
-            const inputEl = document.getElementById('prompt-input');
-            const userPrompt = inputEl.value.trim();
-            if (!userPrompt) return;
+        function renderSessionsList() {
+            const container = document.getElementById('sessionsList');
+            if (sessions.length === 0) {
+                container.innerHTML = '<div class="text-xs text-slate-500 p-2">Немає збережених сесій</div>';
+                return;
+            }
+            container.innerHTML = sessions.map(s => `
+                <div onclick="loadSession('${s.id}')" class="p-3 rounded-xl border ${s.id === currentSessionId ? 'bg-iosCard border-iosBlue' : 'bg-iosCardSecondary border-white/5'} flex justify-between items-center cursor-pointer hover:border-slate-600 transition">
+                    <div class="overflow-hidden mr-2">
+                        <div class="text-xs font-medium text-slate-100 truncate">${s.title}</div>
+                        <div class="text-[10px] text-slate-500">${s.history.length} повідомлень</div>
+                    </div>
+                    <button onclick="deleteSession('${s.id}', event)" class="text-slate-500 hover:text-iosRed p-1 text-xs">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
 
-            const apiKey = getActiveApiKey();
+        function switchTab(tab) {
+            const views = {
+                chat: document.getElementById('viewChat'),
+                preview: document.getElementById('viewPreview'),
+                code: document.getElementById('viewCode'),
+                sessions: document.getElementById('viewSessions'),
+                settings: document.getElementById('viewSettings')
+            };
+            const navs = {
+                chat: document.getElementById('navChat'),
+                preview: document.getElementById('navPreview'),
+                code: document.getElementById('navCode'),
+                sessions: document.getElementById('navSessions'),
+                settings: document.getElementById('navSettings')
+            };
+
+            Object.keys(views).forEach(k => {
+                if (k === tab) {
+                    views[k].classList.remove('hidden');
+                    views[k].classList.add('z-10');
+                    navs[k].className = "flex flex-col items-center justify-center w-full h-full text-iosBlue";
+                } else {
+                    views[k].classList.add('hidden');
+                    views[k].classList.remove('z-10');
+                    navs[k].className = "flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300";
+                }
+            });
+        }
+
+        function setTemplate(txt) {
+            document.getElementById('promptInput').value = txt;
+        }
+
+        function setStatus(msg, isErr = false) {
+            const label = document.getElementById('statusLabel');
+            label.innerText = msg;
+            label.className = `text-[10px] font-mono ${isErr ? 'text-iosRed' : 'text-slate-400'}`;
+        }
+
+        async function handleSendPrompt(e) {
+            e.preventDefault();
+            const input = document.getElementById('promptInput');
+            const prompt = input.value.trim();
+            if (!prompt) return;
+
+            const apiKey = apiKeys[activeKeyIndex];
             if (!apiKey) {
-                appendChatMessage("Система", "Будь ласка, вкажіть хоча б один API ключ у вкладці Налаштування.", "text-red-400");
+                alert(`API Ключ #${activeKeyIndex + 1} не вказано! Перейдіть у вкладку 'Ключі'.`);
                 switchTab('settings');
                 return;
             }
 
-            // Display user message in chat
-            appendChatMessage("Ви", userPrompt, "text-white");
-            inputEl.value = "";
-            setLoading(true);
-            updateIsland("Генерація...", "bg-amber-500 animate-ping");
+            const session = sessions.find(s => s.id === currentSessionId);
+            if (!session) return;
 
-            // Format contents including system prompt & context
-            const contents = [
-                { role: "user", parts: [{ text: SYSTEM_PROMPT }] },
-                ...chatHistory,
-                { role: "user", parts: [{ text: currentCode ? `Поточний код додатка:\n\`\`\`html\n${currentCode}\n\`\`\`\n\nЗапит користувача на зміни: ${userPrompt}` : userPrompt }] }
-            ];
+            // Auto-set title from first user prompt
+            if (session.history.length === 0) {
+                session.title = prompt.length > 25 ? prompt.substring(0, 25) + '...' : prompt;
+                document.getElementById('headerTitle').innerText = session.title;
+            }
+
+            appendMessageUI('user', prompt);
+            session.history.push({ role: 'user', text: prompt });
+            input.value = '';
+            setStatus('Генерація коду...');
+
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = true;
+
+            const model = document.getElementById('modelSelect').value;
+
+            // Build System Prompt with previous code context
+            let systemContext = `Ти — розробник веб-додатків. Твоє завдання — згенерувати АБО оновити вебдодаток в ОДНОМУ автономному файлі HTML.
+Повертай ТІЛЬКИ чистий HTML-код з CSS та JS.`;
+
+            if (session.code) {
+                systemContext += `\n\nПОПЕРЕДНЯ ВЕРСІЯ КОДУ:\n\`\`\`html\n${session.code}\n\`\`\`\n\nВНЕСИ ЗМІНИ/ПРАВКИ В ЦЕЙ КОД ВІДПОВІДНО ДО НОВОГО ЗАПИТУ КОРИСТУВАЧА.`;
+            }
 
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`, {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents })
+                    body: JSON.stringify({
+                        contents: [
+                            { role: 'user', parts: [{ text: `${systemContext}\n\nЗапит: ${prompt}` }] }
+                        ]
+                    })
                 });
 
-                const data = await response.json();
-
-                if (data.error) {
-                    throw new Error(data.error.message || "Помилка API Gemini");
+                if (!res.ok) {
+                    if (res.status === 429) throw new Error('Ліміт 429! Переключіть ключ');
+                    throw new Error(`Помилка (${res.status})`);
                 }
 
-                const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                
-                // Extract HTML block
-                const extractedCode = extractHtmlCode(aiText);
+                const data = await res.json();
+                let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                let newCode = rawText.replace(/```html/gi, '').replace(/```/g, '').trim();
 
-                if (extractedCode) {
-                    currentCode = extractedCode;
-                    
-                    // Maintain Chat History for ongoing context
-                    chatHistory.push({ role: "user", parts: [{ text: userPrompt }] });
-                    chatHistory.push({ role: "model", parts: [{ text: `Код успішно оновлено. [Версія додатка оновлена]` }] });
+                session.code = newCode;
+                session.history.push({ role: 'ai', text: 'Код успішно оновлено!' });
+                saveSessions();
 
-                    appendChatMessage("AI Асистент", "Правки внесено! Перегляньте оновлений веб-додаток у вкладці Прев'ю або Код.", "text-blue-400");
-                    updatePreview();
-                    updateIsland("Оновлено", "bg-emerald-500");
-                } else {
-                    appendChatMessage("AI Асистент", aiText, "text-zinc-300");
-                    updateIsland("Готово", "bg-blue-500");
-                }
+                appendMessageUI('ai', 'Додаток оновлено! Перейдіть у "Пісочницю" для перегляду.');
+                updateSandboxAndCode(newCode);
+                setStatus('Успішно оновлено');
 
             } catch (err) {
-                console.error(err);
-                appendChatMessage("Помилка", err.message || "Не вдалося отримати відповідь.", "text-red-400");
-                updateIsland("Помилка", "bg-red-500");
+                setStatus(err.message, true);
+                appendMessageUI('ai', 'Помилка: ' + err.message);
             } finally {
-                setLoading(false);
+                sendBtn.disabled = false;
             }
         }
 
-        function extractHtmlCode(text) {
-            const match = text.match(/```html\s*([\s\S]*?)\s*```/);
-            if (match && match[1]) {
-                return match[1].trim();
-            }
-            if (text.trim().startsWith("<!DOCTYPE") || text.trim().startsWith("<html")) {
-                return text.trim();
-            }
-            return null;
+        function appendMessageUI(role, text) {
+            const box = document.getElementById('chatMessages');
+            const msg = document.createElement('div');
+            msg.className = `p-2.5 rounded-xl text-xs ${role === 'user' ? 'bg-iosBlue/20 border border-iosBlue/30 text-blue-100 ml-4' : 'bg-iosCardSecondary border border-white/10 text-slate-200 mr-4'}`;
+            msg.innerHTML = `<div class="font-semibold text-[10px] mb-0.5 ${role === 'user' ? 'text-iosBlue' : 'text-purple-400'}">${role === 'user' ? 'Ви' : 'ШІ'}</div><div>${text}</div>`;
+            box.appendChild(msg);
+            box.scrollTop = box.scrollHeight;
         }
 
-        // --- UI HELPERS ---
-        function appendChatMessage(sender, text, colorClass) {
-            const chatList = document.getElementById('chat-list');
-            const msgEl = document.createElement('div');
-            msgEl.className = "glass p-3 rounded-2xl border border-white/10 text-xs leading-relaxed space-y-1";
-            msgEl.innerHTML = `
-                <div class="font-semibold ${colorClass}">${sender}</div>
-                <div class="text-zinc-300 whitespace-pre-wrap">${escapeHtml(text)}</div>
-            `;
-            chatList.appendChild(msgEl);
-            chatList.scrollTop = chatList.scrollHeight;
+        function updateSandboxAndCode(code) {
+            const iframe = document.getElementById('sandboxIframe');
+            iframe.srcdoc = code || '';
+
+            const viewer = document.getElementById('codeViewer');
+            viewer.textContent = code || '<!-- Немає коду -->';
+            hljs.highlightElement(viewer);
         }
 
-        function updatePreview() {
-            const iframe = document.getElementById('preview-frame');
-            iframe.srcdoc = currentCode || `
-                <html>
-                    <body style="background:#121212; color:#888; font-family:sans-serif; display:flex; justify-content:center; align-items:center; height:100vh; margin:0;">
-                        <p style="text-align:center;">Немає згенерованого коду.<br/>Надішліть запит у Студії для створення додатка.</p>
-                    </body>
-                </html>
-            `;
+        function reloadIframe() {
+            const session = sessions.find(s => s.id === currentSessionId);
+            if (session && session.code) updateSandboxAndCode(session.code);
         }
 
-        function reloadPreview() {
-            updatePreview();
-        }
-
-        function renderCodeViewer() {
-            const codeBlock = document.getElementById('code-block');
-            codeBlock.textContent = currentCode || "<!-- Код ще не згенеровано -->";
-            hljs.highlightElement(codeBlock);
-        }
-
-        function updateIsland(text, indicatorClass) {
-            const islandStatus = document.getElementById('island-status');
-            islandStatus.textContent = text;
-        }
-
-        function setLoading(isLoading) {
-            const btn = document.getElementById('send-btn');
-            btn.disabled = isLoading;
-            btn.style.opacity = isLoading ? "0.6" : "1";
-        }
-
-        // --- SETTINGS & MULTI-KEY MANAGEMENT ---
-        function getActiveApiKey() {
-            return apiKeys[activeKeyIndex] || apiKeys.find(k => k.trim() !== "") || "";
-        }
-
-        function renderKeyInputs() {
-            const container = document.getElementById('key-inputs-list');
-            container.innerHTML = "";
-            
-            apiKeys.forEach((key, idx) => {
-                const isSelected = idx === activeKeyIndex;
-                const div = document.createElement('div');
-                div.className = "flex items-center gap-2";
-                div.innerHTML = `
-                    <button onclick="selectActiveKey(${idx})" class="w-6 h-6 rounded-full border border-white/20 flex items-center justify-center text-[10px] ${isSelected ? 'bg-blue-600 text-white border-blue-400' : 'bg-zinc-800 text-zinc-400'}">
-                        ${idx + 1}
-                    </button>
-                    <input type="password" value="${key}" onchange="updateKey(${idx}, this.value)" placeholder="API Ключ #${idx + 1}" class="glass-input flex-1 p-2 rounded-xl text-xs text-white placeholder-zinc-600 font-mono">
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        function selectActiveKey(idx) {
-            activeKeyIndex = idx;
-            renderKeyInputs();
-            saveSettings();
-        }
-
-        function updateKey(idx, val) {
-            apiKeys[idx] = val.trim();
-            saveSettings();
-        }
-
-        function updateModelSelection() {
-            selectedModel = document.getElementById('model-select').value;
-            document.getElementById('active-model-name').textContent = selectedModel;
-            saveSettings();
-        }
-
-        function saveSettings() {
-            localStorage.setItem('gemini_studio_keys', JSON.stringify(apiKeys));
-            localStorage.setItem('gemini_studio_active_key_idx', activeKeyIndex);
-            localStorage.setItem('gemini_studio_model', selectedModel);
-        }
-
-        function loadSettings() {
-            const savedKeys = localStorage.getItem('gemini_studio_keys');
-            if (savedKeys) apiKeys = JSON.parse(savedKeys);
-
-            const savedIdx = localStorage.getItem('gemini_studio_active_key_idx');
-            if (savedIdx !== null) activeKeyIndex = parseInt(savedIdx, 10);
-
-            const savedModel = localStorage.getItem('gemini_studio_model');
-            if (savedModel) {
-                selectedModel = savedModel;
-                document.getElementById('model-select').value = savedModel;
-                document.getElementById('active-model-name').textContent = savedModel;
-            }
-        }
-
-        // --- UTILS ---
         function copyCode() {
-            if (!currentCode) return;
-            navigator.clipboard.writeText(currentCode).then(() => {
-                alert("Код успішно скопійовано!");
-            });
+            const session = sessions.find(s => s.id === currentSessionId);
+            if (!session || !session.code) return;
+            navigator.clipboard.writeText(session.code);
+            alert('Код скопійовано!');
         }
 
         function downloadCode() {
-            if (!currentCode) return;
-            const blob = new Blob([currentCode], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
+            const session = sessions.find(s => s.id === currentSessionId);
+            if (!session || !session.code) return;
+            const blob = new Blob([session.code], { type: 'text/html' });
             const a = document.createElement('a');
-            a.href = url;
+            a.href = URL.createObjectURL(blob);
             a.download = 'index.html';
             a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function escapeHtml(text) {
-            return text.replace(/&/g, "&amp;")
-                       .replace(/</g, "&lt;")
-                       .replace(/>/g, "&gt;");
         }
     </script>
 </body>
 </html>
+
