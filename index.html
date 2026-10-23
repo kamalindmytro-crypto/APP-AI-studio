@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uk" class="dark">
+<html lang="uk" class="dark h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -31,210 +31,199 @@
         }
     </script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             -webkit-tap-highlight-color: transparent;
             user-select: none;
         }
-        ::-webkit-scrollbar { width: 0px; height: 0px; }
         .backdrop-blur-ios {
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
         }
+        /* iOS Safe Area Padding Support */
+        .pt-safe { padding-top: env(safe-area-inset-top, 12px); }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 12px); }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-0 md:p-6 overflow-hidden">
+<body class="bg-black text-slate-100 flex flex-col h-full w-full">
 
-    <!-- Mockup Container (iPhone Frame on Desktop, Native Fullscreen on Mobile) -->
-    <div class="w-full max-w-md h-[100vh] md:h-[844px] bg-black md:rounded-[50px] shadow-2xl border-0 md:border-[10px] md:border-slate-800 flex flex-col relative overflow-hidden">
+    <!-- App Header Bar -->
+    <header class="pt-safe bg-black/80 backdrop-blur-ios border-b border-white/10 px-4 pb-2 flex items-center justify-between shrink-0 z-40">
+        <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-wand-magic-sparkles text-iosBlue text-sm"></i>
+            <h1 class="font-semibold text-sm text-white tracking-tight truncate max-w-[180px]" id="headerTitle">Нова сесія</h1>
+        </div>
         
-        <!-- iPhone Top Notch / Dynamic Island -->
-        <div class="hidden md:flex justify-center pt-2 pb-1 z-50 bg-black shrink-0">
-            <div class="w-28 h-6 bg-slate-900 rounded-full flex items-center justify-between px-3">
-                <div class="w-2.5 h-2.5 rounded-full bg-slate-950"></div>
-                <div class="w-3 h-3 rounded-full bg-indigo-950 border border-indigo-900"></div>
+        <div class="flex items-center space-x-2">
+            <button onclick="createNewSession()" class="bg-iosBlue active:bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-medium transition flex items-center space-x-1">
+                <i class="fa-solid fa-plus text-[10px]"></i>
+                <span>Нова</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Dynamic Content Body -->
+    <main class="flex-1 relative overflow-hidden bg-black w-full">
+        
+        <!-- VIEW 1: GENERATOR (CHAT) -->
+        <div id="viewChat" class="absolute inset-0 flex flex-col z-10 w-full h-full">
+            <!-- Session Context Banner -->
+            <div class="bg-iosCardSecondary/80 border-b border-white/5 px-3 py-1.5 text-[11px] flex justify-between items-center text-slate-400 shrink-0">
+                <div class="flex items-center space-x-1.5 overflow-hidden mr-2">
+                    <i class="fa-solid fa-layer-group text-iosBlue shrink-0"></i>
+                    <span id="sessionStatusLabel" class="truncate">Проект не збережено</span>
+                </div>
+                <select id="modelSelect" class="bg-black/50 text-slate-200 border border-white/10 rounded px-1.5 py-0.5 font-mono text-[10px] outline-none shrink-0">
+                    <option value="gemini-3.8-flash" selected>gemini-3.8-flash</option>
+                    <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite</option>
+                    <option value="gemini-3.1-pro-preview">gemini-3.1-pro</option>
+                </select>
+            </div>
+
+            <!-- Chat History Window -->
+            <div id="chatMessages" class="flex-1 overflow-y-auto p-3 space-y-3 w-full">
+                <div class="bg-iosCard border border-white/5 rounded-2xl p-3 text-xs text-slate-300 space-y-2">
+                    <div class="font-semibold text-iosBlue flex items-center space-x-1.5">
+                        <i class="fa-solid fa-robot"></i>
+                        <span>ШІ Контекст-Асистент</span>
+                    </div>
+                    <p class="text-slate-400 text-[11px]">Опишіть додаток. Усі наступні підказки в цій сесії будуть <b>вносити зміни в той самий код</b>, доки ви не натиснете «Нова».</p>
+                    <div class="flex flex-wrap gap-1.5 pt-1">
+                        <button onclick="setTemplate('Створи Калькулятор грошей з збереженням у LocalStorage')" class="bg-iosCardSecondary active:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-full text-[11px]">📊 Калькулятор</button>
+                        <button onclick="setTemplate('Створи гру Змейка з кнопками керування для смартфона')" class="bg-iosCardSecondary active:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-full text-[11px]">🎮 Змейка</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Form -->
+            <div class="p-3 bg-iosCard/90 border-t border-white/10 backdrop-blur-ios shrink-0">
+                <form onsubmit="handleSendPrompt(event)" class="space-y-2">
+                    <div class="relative">
+                        <textarea id="promptInput" rows="2" placeholder="Опишіть додаток або вкажіть правки..." class="w-full bg-iosCardSecondary text-white placeholder-slate-500 rounded-xl p-2.5 border border-white/10 text-xs outline-none focus:border-iosBlue resize-none"></textarea>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span id="statusLabel" class="text-[10px] text-slate-400 font-mono truncate max-w-[180px]">Готово</span>
+                        <button type="submit" id="sendBtn" class="bg-iosBlue active:bg-blue-600 text-white font-medium px-4 py-1.5 rounded-full text-xs transition flex items-center space-x-1.5 shrink-0">
+                            <i class="fa-solid fa-arrow-up text-xs"></i>
+                            <span>Надіслати</span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 
-        <!-- App Header Bar -->
-        <header class="h-12 bg-black/80 backdrop-blur-ios border-b border-white/10 px-4 flex items-center justify-between shrink-0 z-40">
-            <div class="flex items-center space-x-2">
-                <i class="fa-solid fa-wand-magic-sparkles text-iosBlue text-sm"></i>
-                <h1 class="font-semibold text-sm text-white tracking-tight" id="headerTitle">Нова сесія</h1>
+        <!-- VIEW 2: SANDBOX (PREVIEW) -->
+        <div id="viewPreview" class="absolute inset-0 flex flex-col z-0 hidden bg-white w-full h-full">
+            <div class="h-8 bg-slate-900 border-b border-slate-800 flex justify-between items-center px-3 text-xs text-slate-300 shrink-0">
+                <span class="text-[11px] font-mono text-emerald-400 flex items-center space-x-1">
+                    <i class="fa-solid fa-circle text-[8px] animate-pulse"></i>
+                    <span>Live Sandbox</span>
+                </span>
+                <button onclick="reloadIframe()" class="p-1 text-slate-400 hover:text-white"><i class="fa-solid fa-rotate-right"></i></button>
             </div>
-            
-            <div class="flex items-center space-x-2">
-                <button onclick="createNewSession()" class="bg-iosBlue hover:bg-blue-600 text-white px-2.5 py-1 rounded-full text-[11px] font-medium transition flex items-center space-x-1">
-                    <i class="fa-solid fa-plus text-[10px]"></i>
-                    <span>Нова</span>
-                </button>
-            </div>
-        </header>
+            <iframe id="sandboxIframe" class="w-full flex-1 border-0 bg-white" sandbox="allow-scripts allow-modals allow-forms allow-same-origin"></iframe>
+        </div>
 
-        <!-- Dynamic Content Body -->
-        <main class="flex-1 relative overflow-hidden bg-black">
-            
-            <!-- VIEW 1: GENERATOR (CHAT) -->
-            <div id="viewChat" class="absolute inset-0 flex flex-col z-10">
-                <!-- Session Context Banner -->
-                <div class="bg-iosCardSecondary/80 border-b border-white/5 px-3 py-1.5 text-[11px] flex justify-between items-center text-slate-400">
-                    <div class="flex items-center space-x-1.5">
-                        <i class="fa-solid fa-layer-group text-iosBlue"></i>
-                        <span id="sessionStatusLabel" class="truncate max-w-[200px]">Проект не збережено</span>
-                    </div>
-                    <select id="modelSelect" class="bg-black/50 text-slate-200 border border-white/10 rounded px-1.5 py-0.5 font-mono text-[10px] outline-none">
-                        <option value="gemini-3.8-flash" selected>gemini-3.8-flash</option>
-                        <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite</option>
-                        <option value="gemini-3.1-pro-preview">gemini-3.1-pro</option>
+        <!-- VIEW 3: CODE VIEW -->
+        <div id="viewCode" class="absolute inset-0 flex flex-col z-0 hidden bg-slate-950 w-full h-full">
+            <div class="p-2 bg-iosCard border-b border-white/10 flex justify-between items-center shrink-0">
+                <span class="text-xs text-slate-400 font-mono">index.html</span>
+                <div class="flex space-x-2">
+                    <button onclick="copyCode()" class="bg-iosCardSecondary active:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-lg text-xs flex items-center space-x-1">
+                        <i class="fa-solid fa-copy"></i>
+                        <span>Копіювати</span>
+                    </button>
+                    <button onclick="downloadCode()" class="bg-iosBlue active:bg-blue-600 text-white px-2.5 py-1 rounded-lg text-xs flex items-center space-x-1">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Завантажити</span>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-auto p-3 text-[11px] font-mono w-full">
+                <pre><code id="codeViewer" class="language-xml"><!-- Код з'явиться тут --></code></pre>
+            </div>
+        </div>
+
+        <!-- VIEW 4: SESSIONS (PREVIOUS SESSIONS) -->
+        <div id="viewSessions" class="absolute inset-0 flex flex-col z-0 hidden bg-black p-3 overflow-y-auto w-full h-full">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Збережені сесії</h2>
+                <span class="text-[10px] text-slate-500">Видалення лише вручну</span>
+            </div>
+            <div id="sessionsList" class="space-y-2 w-full">
+                <!-- Dynamic sessions item list -->
+            </div>
+        </div>
+
+        <!-- VIEW 5: SETTINGS (API KEYS) -->
+        <div id="viewSettings" class="absolute inset-0 flex flex-col z-0 hidden bg-black p-4 overflow-y-auto w-full h-full">
+            <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">API Ключі Gemini (до 5 шт)</h2>
+            <div class="space-y-3 text-xs w-full">
+                <div class="bg-iosCard border border-white/10 rounded-xl p-3 space-y-2">
+                    <label class="block text-slate-300">Активний ключ:</label>
+                    <select id="activeKeySelect" onchange="switchActiveKeyIndex(this.value)" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono outline-none">
+                        <option value="0">Ключ #1</option>
+                        <option value="1">Ключ #2</option>
+                        <option value="2">Ключ #3</option>
+                        <option value="3">Ключ #4</option>
+                        <option value="4">Ключ #5</option>
                     </select>
                 </div>
 
-                <!-- Chat History Window -->
-                <div id="chatMessages" class="flex-1 overflow-y-auto p-3 space-y-3">
-                    <div class="bg-iosCard border border-white/5 rounded-2xl p-3 text-xs text-slate-300 space-y-2">
-                        <div class="font-semibold text-iosBlue flex items-center space-x-1.5">
-                            <i class="fa-solid fa-robot"></i>
-                            <span>ШІ Контекст-Асистент</span>
-                        </div>
-                        <p class="text-slate-400 text-[11px]">Опишіть додаток. Усі наступні підказки в цій сесії будуть <b>вносити зміни в той самий код</b>, доки ви не натиснете «Нова».</p>
-                        <div class="flex flex-wrap gap-1 pt-1">
-                            <button onclick="setTemplate('Створи Калькулятор грошей з збереженням у LocalStorage')" class="bg-iosCardSecondary hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full text-[10px]">📊 Калькулятор</button>
-                            <button onclick="setTemplate('Створи гру Змейка з кнопками керування для смартфона')" class="bg-iosCardSecondary hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full text-[10px]">🎮 Змейка</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Input Form -->
-                <div class="p-3 bg-iosCard/90 border-t border-white/10 backdrop-blur-ios">
-                    <form onsubmit="handleSendPrompt(event)" class="space-y-2">
-                        <div class="relative">
-                            <textarea id="promptInput" rows="2" placeholder="Опишіть додаток або вкажіть правки..." class="w-full bg-iosCardSecondary text-white placeholder-slate-500 rounded-xl p-2.5 border border-white/10 text-xs outline-none focus:border-iosBlue resize-none"></textarea>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span id="statusLabel" class="text-[10px] text-slate-400 font-mono">Готово</span>
-                            <button type="submit" id="sendBtn" class="bg-iosBlue hover:bg-blue-600 text-white font-medium px-3.5 py-1.5 rounded-full text-xs transition flex items-center space-x-1.5">
-                                <i class="fa-solid fa-arrow-up text-xs"></i>
-                                <span>Надіслати</span>
-                            </button>
-                        </div>
-                    </form>
+                <div class="bg-iosCard border border-white/10 rounded-xl p-3 space-y-2">
+                    <span class="text-slate-400 text-[11px] block">Введіть ваші Gemini API keys:</span>
+                    <input type="password" id="key0" placeholder="API Key 1" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
+                    <input type="password" id="key1" placeholder="API Key 2" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
+                    <input type="password" id="key2" placeholder="API Key 3" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
+                    <input type="password" id="key3" placeholder="API Key 4" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
+                    <input type="password" id="key4" placeholder="API Key 5" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
+                    
+                    <button onclick="saveApiKeys()" class="w-full bg-iosBlue active:bg-blue-600 text-white py-2.5 rounded-lg font-medium transition mt-2 text-xs">
+                        Зберегти ключі
+                    </button>
                 </div>
             </div>
-
-            <!-- VIEW 2: SANDBOX (PREVIEW) -->
-            <div id="viewPreview" class="absolute inset-0 flex flex-col z-0 hidden bg-white">
-                <div class="h-8 bg-slate-900 border-b border-slate-800 flex justify-between items-center px-3 text-xs text-slate-300">
-                    <span class="text-[11px] font-mono text-emerald-400 flex items-center space-x-1">
-                        <i class="fa-solid fa-circle text-[8px] animate-pulse"></i>
-                        <span>Live Sandbox</span>
-                    </span>
-                    <button onclick="reloadIframe()" class="hover:text-white"><i class="fa-solid fa-rotate-right"></i></button>
-                </div>
-                <iframe id="sandboxIframe" class="w-full flex-1 border-0 bg-white" sandbox="allow-scripts allow-modals allow-forms allow-same-origin"></iframe>
-            </div>
-
-            <!-- VIEW 3: CODE VIEW -->
-            <div id="viewCode" class="absolute inset-0 flex flex-col z-0 hidden bg-slate-950">
-                <div class="p-2 bg-iosCard border-b border-white/10 flex justify-between items-center">
-                    <span class="text-xs text-slate-400 font-mono">index.html</span>
-                    <div class="flex space-x-2">
-                        <button onclick="copyCode()" class="bg-iosCardSecondary hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-lg text-xs flex items-center space-x-1">
-                            <i class="fa-solid fa-copy"></i>
-                            <span>Копіювати</span>
-                        </button>
-                        <button onclick="downloadCode()" class="bg-iosBlue hover:bg-blue-600 text-white px-2.5 py-1 rounded-lg text-xs flex items-center space-x-1">
-                            <i class="fa-solid fa-download"></i>
-                            <span>Завантажити</span>
-                        </button>
-                    </div>
-                </div>
-                <div class="flex-1 overflow-auto p-3 text-[11px] font-mono">
-                    <pre><code id="codeViewer" class="language-xml"><!-- Код з'явиться тут --></code></pre>
-                </div>
-            </div>
-
-            <!-- VIEW 4: SESSIONS (PREVIOUS SESSIONS) -->
-            <div id="viewSessions" class="absolute inset-0 flex flex-col z-0 hidden bg-black p-3 overflow-y-auto">
-                <div class="flex justify-between items-center mb-3">
-                    <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Збережені сесії</h2>
-                    <span class="text-[10px] text-slate-500">Видалення лише вручну</span>
-                </div>
-                <div id="sessionsList" class="space-y-2">
-                    <!-- Dynamic sessions item list -->
-                </div>
-            </div>
-
-            <!-- VIEW 5: SETTINGS (API KEYS) -->
-            <div id="viewSettings" class="absolute inset-0 flex flex-col z-0 hidden bg-black p-4 overflow-y-auto">
-                <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">API Ключі Gemini (до 5 шт)</h2>
-                <div class="space-y-3 text-xs">
-                    <div class="bg-iosCard border border-white/10 rounded-xl p-3 space-y-2">
-                        <label class="block text-slate-300">Активний ключ:</label>
-                        <select id="activeKeySelect" onchange="switchActiveKeyIndex(this.value)" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono outline-none">
-                            <option value="0">Ключ #1</option>
-                            <option value="1">Ключ #2</option>
-                            <option value="2">Ключ #3</option>
-                            <option value="3">Ключ #4</option>
-                            <option value="4">Ключ #5</option>
-                        </select>
-                    </div>
-
-                    <div class="bg-iosCard border border-white/10 rounded-xl p-3 space-y-2">
-                        <span class="text-slate-400 text-[11px] block">Введіть ваші Gemini API keys:</span>
-                        <input type="password" id="key0" placeholder="API Key 1" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
-                        <input type="password" id="key1" placeholder="API Key 2" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
-                        <input type="password" id="key2" placeholder="API Key 3" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
-                        <input type="password" id="key3" placeholder="API Key 4" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
-                        <input type="password" id="key4" placeholder="API Key 5" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
-                        
-                        <button onclick="saveApiKeys()" class="w-full bg-iosBlue hover:bg-blue-600 text-white py-2 rounded-lg font-medium transition mt-2">
-                            Зберегти ключі
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-        </main>
-
-        <!-- Bottom iOS Tab Bar -->
-        <nav class="h-16 bg-iosCard/90 backdrop-blur-ios border-t border-white/10 flex justify-around items-center shrink-0 z-40 px-1">
-            <button onclick="switchTab('chat')" id="navChat" class="flex flex-col items-center justify-center w-full h-full text-iosBlue">
-                <i class="fa-solid fa-message text-base mb-0.5"></i>
-                <span class="text-[10px] font-medium">Чат</span>
-            </button>
-            <button onclick="switchTab('preview')" id="navPreview" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300">
-                <i class="fa-solid fa-play text-base mb-0.5"></i>
-                <span class="text-[10px] font-medium">Пісочниця</span>
-            </button>
-            <button onclick="switchTab('code')" id="navCode" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300">
-                <i class="fa-solid fa-code text-base mb-0.5"></i>
-                <span class="text-[10px] font-medium">Код</span>
-            </button>
-            <button onclick="switchTab('sessions')" id="navSessions" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300">
-                <i class="fa-solid fa-box-archive text-base mb-0.5"></i>
-                <span class="text-[10px] font-medium">Сесії</span>
-            </button>
-            <button onclick="switchTab('settings')" id="navSettings" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300">
-                <i class="fa-solid fa-gear text-base mb-0.5"></i>
-                <span class="text-[10px] font-medium">Ключі</span>
-            </button>
-        </nav>
-
-        <!-- iPhone Home Bar Indicator -->
-        <div class="hidden md:flex justify-center pb-1 bg-black shrink-0">
-            <div class="w-32 h-1 bg-slate-700 rounded-full"></div>
         </div>
 
-    </div>
+    </main>
+
+    <!-- Bottom iOS Tab Bar -->
+    <nav class="pb-safe bg-iosCard/95 backdrop-blur-ios border-t border-white/10 flex justify-around items-center shrink-0 z-40 px-1 h-16">
+        <button onclick="switchTab('chat')" id="navChat" class="flex flex-col items-center justify-center w-full h-full text-iosBlue">
+            <i class="fa-solid fa-message text-base mb-0.5"></i>
+            <span class="text-[10px] font-medium">Чат</span>
+        </button>
+        <button onclick="switchTab('preview')" id="navPreview" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300">
+            <i class="fa-solid fa-play text-base mb-0.5"></i>
+            <span class="text-[10px] font-medium">Пісочниця</span>
+        </button>
+        <button onclick="switchTab('code')" id="navCode" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300">
+            <i class="fa-solid fa-code text-base mb-0.5"></i>
+            <span class="text-[10px] font-medium">Код</span>
+        </button>
+        <button onclick="switchTab('sessions')" id="navSessions" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300">
+            <i class="fa-solid fa-box-archive text-base mb-0.5"></i>
+            <span class="text-[10px] font-medium">Сесії</span>
+        </button>
+        <button onclick="switchTab('settings')" id="navSettings" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300">
+            <i class="fa-solid fa-gear text-base mb-0.5"></i>
+            <span class="text-[10px] font-medium">Ключі</span>
+        </button>
+    </nav>
 
     <!-- Application Script -->
     <script>
         let apiKeys = ['', '', '', '', ''];
         let activeKeyIndex = 0;
-        let sessions = []; // Persistent sessions list
+        let sessions = [];
         let currentSessionId = null;
 
-        // Initialize App
         window.addEventListener('DOMContentLoaded', () => {
             loadApiKeys();
             loadSessions();
@@ -315,7 +304,6 @@
             document.getElementById('headerTitle').innerText = session.title;
             document.getElementById('sessionStatusLabel').innerText = session.title;
 
-            // Render Messages
             const chatBox = document.getElementById('chatMessages');
             chatBox.innerHTML = `
                 <div class="bg-iosCard border border-white/5 rounded-2xl p-3 text-xs text-slate-300 space-y-2">
@@ -355,7 +343,7 @@
                         <div class="text-xs font-medium text-slate-100 truncate">${s.title}</div>
                         <div class="text-[10px] text-slate-500">${s.history.length} повідомлень</div>
                     </div>
-                    <button onclick="deleteSession('${s.id}', event)" class="text-slate-500 hover:text-iosRed p-1 text-xs">
+                    <button onclick="deleteSession('${s.id}', event)" class="text-slate-500 hover:text-iosRed p-2 text-xs">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
@@ -398,7 +386,7 @@
         function setStatus(msg, isErr = false) {
             const label = document.getElementById('statusLabel');
             label.innerText = msg;
-            label.className = `text-[10px] font-mono ${isErr ? 'text-iosRed' : 'text-slate-400'}`;
+            label.className = `text-[10px] font-mono truncate ${isErr ? 'text-iosRed' : 'text-slate-400'}`;
         }
 
         async function handleSendPrompt(e) {
@@ -417,7 +405,6 @@
             const session = sessions.find(s => s.id === currentSessionId);
             if (!session) return;
 
-            // Auto-set title from first user prompt
             if (session.history.length === 0) {
                 session.title = prompt.length > 25 ? prompt.substring(0, 25) + '...' : prompt;
                 document.getElementById('headerTitle').innerText = session.title;
@@ -433,7 +420,6 @@
 
             const model = document.getElementById('modelSelect').value;
 
-            // Build System Prompt with previous code context
             let systemContext = `Ти — розробник веб-додатків. Твоє завдання — згенерувати АБО оновити вебдодаток в ОДНОМУ автономному файлі HTML.
 Повертай ТІЛЬКИ чистий HTML-код з CSS та JS.`;
 
@@ -519,4 +505,3 @@
     </script>
 </body>
 </html>
-
