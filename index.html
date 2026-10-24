@@ -1,2801 +1,515 @@
+На скріншоті видно головну проблему: код мав фіксовану ширину та обгортку-імітацію iPhone (з фіксованими max-w-md та висотою h-[844px]), через що на справжньому екрані смартфона він з'їхав убік, обрізався та створив горизонтальний скролл.
+Я повністю переписав верстку. Тепер:
+ * Повна адаптивність під мобільний екран (Mobile-first): Додаток займає 100% ширини та висоти екрана смартфона без жодних фреймів чи обрізань.
+ * Безпечні зони iOS (Safe Areas): Враховано відступи під Dynamic Island / Notch зверху та Home Bar знизу.
+ * Ніякого горизонтального скролу: Все ідеально вміщується на екрані телефону.
+Ось виправлений код:
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="uk" class="dark h-full">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-<title>Виробництво · Трекер</title>
- 
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Виробництво">
-<meta name="theme-color" content="#14171a">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='36' fill='%2314171a'/%3E%3Ctext x='90' y='122' font-size='96' text-anchor='middle'%3E%F0%9F%AA%A3%3C/text%3E%3C/svg%3E">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='36' fill='%2314171a'/%3E%3Ctext x='90' y='122' font-size='96' text-anchor='middle'%3E%F0%9F%AA%A3%3C/text%3E%3C/svg%3E">
- 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
- 
-<style>
-/* ======================= GLOBAL / SHARED CHROME ======================= */
-:root{
-  --bg:#14171a;
-  --surface:#1c2024;
-  --surface-2:#242a2f;
-  --surface-3:#2c333a;
-  --border:#343c43;
-  --text:#eceeef;
-  --text-muted:#8f9aa3;
-  --text-dim:#666f77;
-  --amber:#f2a93b;
-  --amber-dim:#7a5a1f;
-  --red:#e35b3d;
-  --green:#38c98a;
-  --green-dim:#1c4f3c;
-  --radius:10px;
-  --mono: ui-monospace, "SFMono-Regular", "Roboto Mono", Menlo, Consolas, monospace;
-  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-*{box-sizing:border-box;}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
-body{-webkit-tap-highlight-color:transparent; padding-bottom:24px;}
-button{font-family:inherit;}
-input,select,textarea{font-family:inherit;}
-::-webkit-scrollbar{width:0;height:0;}
- 
-.app{max-width:640px;margin:0 auto;min-height:100vh;background:var(--bg);}
- 
-header.top{
-  position:sticky;top:0;z-index:20;
-  background:linear-gradient(180deg,#181c1f 0%, #14171a 100%);
-  border-bottom:1px solid var(--border);
-  padding:14px 16px 0 16px;
-}
-.brand{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
-.brand .lamp{width:10px;height:10px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px 2px rgba(242,169,59,.55);}
-.brand h1{font-size:15px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;margin:0;color:var(--text);}
-.brand span{color:var(--text-dim);font-size:12px;margin-left:auto;font-family:var(--mono);}
- 
-.tabs{display:flex;gap:2px;overflow-x:auto;}
-.tab{
-  flex:1;text-align:center;padding:10px 4px 12px 4px;border:none;background:transparent;
-  color:var(--text-muted);font-size:12.5px;font-weight:600;letter-spacing:.02em;
-  border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;
-}
-.tab.active{color:var(--amber);border-bottom-color:var(--amber);}
- 
-main{padding:14px 14px 40px 14px;}
-section{display:none;}
-section.active{display:block;}
- 
-footer{
-  max-width:640px;margin:28px auto 0;padding:0 16px;text-align:center;
-  color:var(--text-dim);font-size:11.5px;line-height:1.5;
-}
- 
-/* ======================= MODULE: ЗЛИТТЯ (zlyttya) ======================= */
-.mod-zlyttya{
-  --bg:#12161c;
-  --panel:#1a2029;
-  --panel-2:#212836;
-  --border:#2a3140;
-  --text:#e7ebf1;
-  --text-dim:#8b95a5;
-  --accent:#ff9f1c;
-  --accent-dim:#6b4a12;
-  --ok:#3ddc84;
-  --warn:#ffb347;
-  --danger:#ff5c5c;
-  --danger-glow: rgba(255, 92, 92, 0.35);
-}
- 
-.mod-zlyttya .toolbar{ margin-bottom:16px; }
-.mod-zlyttya .btn-add-machine{ width:100%; padding:14px; font-size:15px; }
-.mod-zlyttya .add-modal{ max-width:460px; }
- 
-.mod-zlyttya .form-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
-  gap:12px;
-}
-.mod-zlyttya .field label{
-  display:flex; align-items:center; justify-content:space-between; gap:8px;
-  font-size:12px; color:var(--text-dim); margin-bottom:6px;
-}
-.mod-zlyttya .calc-trigger{
-  background:var(--panel-2); border:1px solid var(--border); color:var(--accent);
-  font-size:14px; line-height:1; padding:3px 7px; border-radius:6px; cursor:pointer;
-  flex-shrink:0; transition:border-color .15s, background .15s;
-}
-.mod-zlyttya .calc-trigger:hover{ border-color:var(--accent); background:var(--accent-dim); }
-.mod-zlyttya .field input{
-  width:100%; background:var(--panel-2); border:1px solid var(--border); border-radius:8px;
-  padding:10px 12px; color:var(--text); font-family:var(--mono); font-size:15px;
-  transition:border-color .15s;
-}
-.mod-zlyttya .field input:focus{ outline:none; border-color:var(--accent); }
- 
-.mod-zlyttya .form-actions{ margin-top:16px; display:flex; gap:10px; align-items:center; }
-.mod-zlyttya .btn{
-  border:none; border-radius:8px; padding:11px 20px; font-size:14px; font-weight:600;
-  cursor:pointer; font-family:var(--sans); transition:transform .1s, filter .15s;
-}
-.mod-zlyttya .btn:active{ transform:scale(0.97); }
-.mod-zlyttya .btn-primary{ background:var(--accent); color:#1a1200; }
-.mod-zlyttya .btn-primary:hover{ filter:brightness(1.08); }
-.mod-zlyttya .btn-ghost{ background:transparent; border:1px solid var(--border); color:var(--text-dim); }
-.mod-zlyttya .btn-ghost:hover{ color:var(--text); border-color:var(--text-dim); }
-.mod-zlyttya .btn-danger{ background:var(--danger); color:#2a0a0a; }
-.mod-zlyttya .btn-danger:hover{ filter:brightness(1.1); }
- 
-.mod-zlyttya .confirm-delete{
-  background:rgba(255,92,92,0.08); border:1px solid rgba(255,92,92,0.35); border-radius:10px;
-  padding:14px; text-align:center;
-}
-.mod-zlyttya .confirm-delete span{ display:block; font-size:14px; margin-bottom:12px; color:var(--text); }
-.mod-zlyttya .confirm-delete-actions{ display:flex; gap:8px; justify-content:center; }
-.mod-zlyttya .confirm-delete-actions .btn{ padding:9px 16px; font-size:13px; }
- 
-.mod-zlyttya .form-error{ color:var(--danger); font-size:13px; }
- 
-.mod-zlyttya .empty-state{
-  text-align:center; padding:60px 20px; color:var(--text-dim);
-  border:1px dashed var(--border); border-radius:14px;
-}
-.mod-zlyttya .empty-state .big{ font-size:40px; margin-bottom:8px; opacity:.5; }
- 
-.mod-zlyttya .cards{
-  display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:8px;
-}
-.mod-zlyttya .tile{
-  background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:10px;
-  aspect-ratio:1 / 1; display:flex; flex-direction:column; justify-content:space-between; gap:4px;
-  cursor:pointer; position:relative; overflow:hidden;
-  transition:border-color .3s, box-shadow .3s, transform .1s;
-}
-.mod-zlyttya .tile:active{ transform:scale(0.96); }
-.mod-zlyttya .tile.state-ok{ border-color:var(--border); }
-.mod-zlyttya .tile.state-warn{ border-color:rgba(255,179,71,0.5); box-shadow:0 0 0 1px rgba(255,179,71,0.15); }
-.mod-zlyttya .tile.state-danger{
-  border-color:rgba(255,92,92,0.6); box-shadow:0 0 18px var(--danger-glow);
-  animation:zl-pulse-danger 1.8s ease-in-out infinite;
-}
-.mod-zlyttya .tile.state-done{ border-color:var(--ok); box-shadow:0 0 14px rgba(61,220,132,0.25); }
-@keyframes zl-pulse-danger{ 0%,100%{ box-shadow:0 0 12px var(--danger-glow); } 50%{ box-shadow:0 0 22px var(--danger-glow); } }
- 
-.mod-zlyttya .tile-name{ font-size:13px; font-weight:700; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.mod-zlyttya .tile-countdown{ font-family:var(--mono); font-size:17px; font-weight:700; letter-spacing:0.2px; line-height:1.15; }
-.mod-zlyttya .tile.state-warn .tile-countdown{ color:var(--warn); }
-.mod-zlyttya .tile.state-danger .tile-countdown{ color:var(--danger); }
-.mod-zlyttya .tile.state-done .tile-countdown{ color:var(--ok); }
- 
-.mod-zlyttya .tile-progress{ height:4px; background:var(--panel-2); border-radius:3px; overflow:hidden; flex-shrink:0; }
-.mod-zlyttya .tile-progress-fill{ height:100%; background:linear-gradient(90deg, var(--accent), var(--ok)); transition:width .5s ease; }
-.mod-zlyttya .tile.state-danger .tile-progress-fill{ background:var(--danger); }
-.mod-zlyttya .tile.state-done .tile-progress-fill{ background:var(--ok); }
- 
-.mod-zlyttya .tile-remaining{ font-family:var(--mono); font-size:12px; font-weight:600; color:var(--text); }
-.mod-zlyttya .tile-remaining span{ font-family:var(--sans); font-weight:400; color:var(--text-dim); font-size:9.5px; text-transform:uppercase; letter-spacing:0.3px; margin-left:3px; }
- 
-.mod-zlyttya .tile-finish{ font-family:var(--mono); font-size:10.5px; color:var(--text-dim); line-height:1.3; border-top:1px solid var(--border); padding-top:4px; }
-.mod-zlyttya .tile-finish b{ display:block; color:var(--text); font-weight:600; font-size:11.5px; }
- 
-.mod-zlyttya.detail-overlay{
-  display:none; position:fixed; inset:0; background:rgba(8,10,14,0.72); backdrop-filter:blur(2px);
-  z-index:110; align-items:center; justify-content:center; padding:16px;
-}
-.mod-zlyttya.detail-overlay.open{ display:flex; }
-.mod-zlyttya .detail-modal{
-  background:var(--panel); border:1px solid var(--border); border-radius:14px; width:100%; max-width:380px;
-  padding:18px; box-shadow:0 20px 60px rgba(0,0,0,0.5); max-height:88vh; overflow-y:auto;
-}
-.mod-zlyttya .card-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; }
-.mod-zlyttya .machine-name{ font-size:18px; font-weight:700; display:flex; align-items:center; gap:8px; }
-.mod-zlyttya .status-chip{ font-size:10px; text-transform:uppercase; letter-spacing:0.6px; padding:3px 8px; border-radius:20px; font-weight:700; }
-.mod-zlyttya .state-ok .status-chip{ background:rgba(61,220,132,0.12); color:var(--ok); }
-.mod-zlyttya .state-warn .status-chip{ background:rgba(255,179,71,0.15); color:var(--warn); }
-.mod-zlyttya .state-danger .status-chip{ background:rgba(255,92,92,0.18); color:var(--danger); }
-.mod-zlyttya .state-done .status-chip{ background:rgba(61,220,132,0.2); color:var(--ok); }
- 
-.mod-zlyttya .icon-btn{
-  background:transparent; border:none; color:var(--text-dim); cursor:pointer; font-size:16px;
-  padding:4px 8px; border-radius:6px; line-height:1; transition:background .15s, color .15s;
-}
-.mod-zlyttya .icon-btn:hover{ background:rgba(255,92,92,0.12); color:var(--danger); }
- 
-.mod-zlyttya .countdown{ font-family:var(--mono); font-size:34px; font-weight:700; letter-spacing:1px; margin-bottom:4px; }
-.mod-zlyttya .state-warn .countdown{ color:var(--warn); }
-.mod-zlyttya .state-danger .countdown{ color:var(--danger); }
-.mod-zlyttya .state-done .countdown{ color:var(--ok); }
-.mod-zlyttya .countdown-label{ font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:16px; }
- 
-.mod-zlyttya .stat-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
-.mod-zlyttya .stat-box{ background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:8px 10px; }
-.mod-zlyttya .stat-box .v{ font-family:var(--mono); font-size:16px; font-weight:600; }
-.mod-zlyttya .stat-box .l{ font-size:10.5px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.4px; margin-top:2px; }
- 
-.mod-zlyttya .finish-time{ font-size:13px; color:var(--text-dim); border-top:1px solid var(--border); padding-top:12px; display:flex; justify-content:space-between; }
-.mod-zlyttya .finish-time b{ color:var(--text); font-family:var(--mono); font-weight:600; }
- 
-.mod-zlyttya .progress-bar{ height:5px; background:var(--panel-2); border-radius:3px; overflow:hidden; margin:12px 0; }
-.mod-zlyttya .progress-bar-fill{ height:100%; background:linear-gradient(90deg, var(--accent), var(--ok)); transition:width .5s ease; }
-.mod-zlyttya .state-danger .progress-bar-fill{ background:var(--danger); }
-.mod-zlyttya .state-done .progress-bar-fill{ background:var(--ok); }
- 
-.mod-zlyttya .meta-note{ font-size:12px; color:var(--text-dim); margin-top:8px; display:flex; gap:6px; align-items:center; }
- 
-.mod-zlyttya .detail-delete-row{ margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
-.mod-zlyttya .detail-delete-row .btn{ width:100%; }
- 
-.mod-zlyttya.calc-overlay{
-  display:none; position:fixed; inset:0; background:rgba(8, 10, 14, 0.7); backdrop-filter:blur(2px);
-  z-index:120; align-items:center; justify-content:center; padding:16px;
-}
-.mod-zlyttya.calc-overlay.open{ display:flex; }
-.mod-zlyttya .calc-modal{
-  background:var(--panel); border:1px solid var(--border); border-radius:14px; width:100%; max-width:340px;
-  padding:18px; box-shadow:0 20px 60px rgba(0,0,0,0.5);
-}
-.mod-zlyttya .calc-modal-head{ display:flex; justify-content:space-between; align-items:center; font-size:14px; font-weight:600; margin-bottom:16px; }
-.mod-zlyttya .calc-body .field{ margin-bottom:12px; }
-.mod-zlyttya .calc-result{
-  background:var(--panel-2); border:1px solid var(--accent-dim); border-radius:8px; padding:10px 12px;
-  display:flex; justify-content:space-between; align-items:center; margin-top:8px;
-}
-.mod-zlyttya .calc-result span{ font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.6px; }
-.mod-zlyttya .calc-result b{ font-family:var(--mono); font-size:22px; color:var(--accent); }
-.mod-zlyttya .calc-modal-actions{ display:flex; gap:10px; margin-top:16px; }
-.mod-zlyttya .calc-modal-actions .btn{ flex:1; }
- 
-@media (max-width:480px){
-  .mod-zlyttya .countdown{ font-size:26px; }
-  .mod-zlyttya .form-grid{ grid-template-columns:1fr 1fr; }
-  .mod-zlyttya .cards{ grid-template-columns:1fr 1fr; gap:8px; }
-}
- 
-/* ======================= MODULE: ТРЕКЕР ЗАЯВОК/ЕТИКЕТОК (tracker) ======================= */
-.mod-tracker .toolbar{ display:flex; gap:8px; margin-bottom:14px; }
-.mod-tracker .btn{
-  appearance:none; border:1px solid var(--border); background:var(--surface-2); color:var(--text);
-  padding:10px 14px; border-radius:8px; font-size:13.5px; font-weight:600; cursor:pointer;
-}
-.mod-tracker .btn:active{ background:var(--surface-3); }
-.mod-tracker .btn-primary{ background:var(--amber); color:#1a1400; border-color:var(--amber); flex:1; }
-.mod-tracker .btn-primary:active{ background:#d6941f; }
-.mod-tracker .btn-danger{ color:var(--red); border-color:var(--amber-dim); }
-.mod-tracker .btn-ghost{ background:transparent; }
-.mod-tracker .btn-block{ width:100%; }
-.mod-tracker .btn-sm{ padding:6px 10px; font-size:12px; border-radius:6px; }
- 
-.mod-tracker .empty{
-  text-align:center; color:var(--text-dim); padding:50px 20px; font-size:13.5px; line-height:1.6;
-  border:1px dashed var(--border); border-radius:var(--radius);
-}
- 
-.mod-tracker .row{
-  display:flex; align-items:center; gap:10px;
-  background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--text-dim);
-  border-radius:8px; padding:11px 12px; margin-bottom:8px; cursor:pointer;
-}
-.mod-tracker .row.matched{ border-left-color:var(--green); }
-.mod-tracker .row.warn{ border-left-color:var(--red); }
-.mod-tracker .row:active{ background:var(--surface-2); }
-.mod-tracker .led{ width:9px; height:9px; border-radius:50%; flex:none; background:var(--text-dim); }
-.mod-tracker .row.matched .led{ background:var(--green); box-shadow:0 0 6px 1px rgba(56,201,138,.65); animation:tr-pulse 2.4s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce){ .mod-tracker .row.matched .led{ animation:none; } }
-@keyframes tr-pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.45; } }
-.mod-tracker .row-main{ flex:1; min-width:0; }
-.mod-tracker .row-line1{ display:flex; justify-content:space-between; gap:8px; font-family:var(--mono); font-size:13px; color:var(--text); }
-.mod-tracker .row-line2{ display:flex; justify-content:space-between; gap:8px; margin-top:3px; font-size:11.5px; color:var(--text-muted); }
-.mod-tracker .row-line2 .code{ font-family:var(--mono); color:var(--amber); font-size:12px; }
-.mod-tracker .row-line2 .missing{ color:var(--red); }
-.mod-tracker .machine-badge{
-  font-family:var(--mono); font-size:11px; font-weight:700; padding:2px 6px; border-radius:5px;
-  background:var(--surface-3); color:var(--text-muted); border:1px solid var(--border); white-space:nowrap;
-}
-.mod-tracker .row.matched .machine-badge{ color:var(--green); border-color:var(--green-dim); background:rgba(56,201,138,.08); }
- 
-.mod-tracker .label-row .code-main{ font-family:var(--mono); font-size:15px; font-weight:600; letter-spacing:.02em; }
-.mod-tracker .label-matches{ display:flex; gap:4px; flex-wrap:wrap; margin-top:4px; }
-.mod-tracker .label-matches .machine-badge{ color:var(--green); border-color:var(--green-dim); background:rgba(56,201,138,.08); }
- 
-.mod-tracker .row-actions{ display:flex; gap:6px; }
-.mod-tracker .icon-btn{ background:transparent; border:none; color:var(--text-dim); font-size:16px; padding:4px 6px; cursor:pointer; line-height:1; }
-.mod-tracker .icon-btn:active{ color:var(--red); }
- 
-.mod-tracker.overlay{
-  position:fixed; inset:0; background:rgba(6,7,8,.72); display:none; align-items:flex-end; justify-content:center; z-index:100;
-}
-.mod-tracker.overlay.open{ display:flex; }
-.mod-tracker .modal{
-  background:var(--surface); width:100%; max-width:640px; max-height:92vh; overflow-y:auto;
-  border-radius:16px 16px 0 0; border:1px solid var(--border); border-bottom:none; padding:18px 16px 24px 16px;
-  animation:tr-slideup .18s ease-out;
-}
-@keyframes tr-slideup{ from{ transform:translateY(16px); opacity:.6; } to{ transform:translateY(0); opacity:1; } }
-.mod-tracker .modal h2{ font-size:15px; margin:0 0 14px 0; color:var(--text); letter-spacing:.02em; }
-.mod-tracker .modal h2 .sub{ display:block; font-size:11.5px; color:var(--text-dim); font-weight:400; margin-top:2px; }
-.mod-tracker .field{ margin-bottom:12px; }
-.mod-tracker .field label{ display:block; font-size:11.5px; color:var(--text-muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.04em; }
-.mod-tracker .field input[type=text],.mod-tracker .field input[type=date],.mod-tracker .field select,.mod-tracker .field textarea{
-  width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
-  padding:10px 11px; border-radius:8px; font-size:14px;
-}
-.mod-tracker .field textarea{ min-height:110px; resize:vertical; font-family:var(--mono); font-size:12.5px; line-height:1.5; }
-.mod-tracker .field select{
-  appearance:none;
-  background-image:linear-gradient(45deg,transparent 50%,var(--text-dim) 50%),linear-gradient(135deg,var(--text-dim) 50%,transparent 50%);
-  background-position:calc(100% - 18px) center,calc(100% - 13px) center; background-size:5px 5px,5px 5px; background-repeat:no-repeat;
-}
-.mod-tracker .row2{ display:flex; gap:8px; }
-.mod-tracker .row2 .field{ flex:1; }
- 
-.mod-tracker .method-grid{ display:flex; gap:8px; margin-bottom:14px; }
-.mod-tracker .method-btn{
-  flex:1; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:14px 6px;
-  text-align:center; color:var(--text-muted); font-size:12px; font-weight:600; cursor:pointer;
-}
-.mod-tracker .method-btn .ic{ display:block; font-size:20px; margin-bottom:5px; }
-.mod-tracker .method-btn.active{ border-color:var(--amber); color:var(--amber); background:rgba(242,169,59,.07); }
- 
-.mod-tracker .thumbs{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
-.mod-tracker .thumb{ position:relative; width:64px; height:64px; border-radius:8px; overflow:hidden; border:1px solid var(--border); }
-.mod-tracker .thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
-.mod-tracker .thumb .rm{ position:absolute; top:2px; right:2px; background:rgba(0,0,0,.65); color:#fff; border:none; border-radius:50%; width:18px; height:18px; font-size:11px; line-height:1; cursor:pointer; }
- 
-.mod-tracker .divider{ display:flex; align-items:center; gap:10px; margin:14px 0; color:var(--text-dim); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
-.mod-tracker .divider::before,.mod-tracker .divider::after{ content:""; flex:1; height:1px; background:var(--border); }
- 
-.mod-tracker .status-line{ font-size:12.5px; color:var(--text-muted); margin:6px 0 12px 0; min-height:16px; }
-.mod-tracker .status-line.err{ color:var(--red); }
-.mod-tracker .status-line.ok{ color:var(--green); }
- 
-.mod-tracker .review-card{ background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:10px; }
-.mod-tracker .review-card .rc-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-.mod-tracker .review-card .rc-head span{ font-size:11px; color:var(--text-dim); font-family:var(--mono); }
-.mod-tracker .code-chip{
-  display:inline-block; background:var(--surface-3); border:1px solid var(--border); color:var(--amber);
-  font-family:var(--mono); font-size:13px; padding:6px 10px; border-radius:7px; margin:0 6px 6px 0;
-}
-.mod-tracker .code-chip .rm{ background:none; border:none; color:var(--text-dim); margin-left:6px; cursor:pointer; font-size:12px; }
- 
-.mod-tracker .modal-actions{ display:flex; gap:8px; margin-top:16px; }
- 
-.mod-tracker .apikey-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-.mod-tracker .apikey-row input[type=radio]{ width:16px; height:16px; flex:none; accent-color:var(--amber); }
-.mod-tracker .apikey-row .ak-label{ font-size:11px; color:var(--text-dim); width:44px; flex:none; font-family:var(--mono); }
-.mod-tracker .apikey-row input[type=text]{
-  flex:1; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
-  padding:9px 10px; border-radius:7px; font-size:12.5px; font-family:var(--mono);
-}
-.mod-tracker .apikey-row.active-slot input[type=text]{ border-color:var(--amber); }
-.mod-tracker .apikey-row.active-slot .ak-label{ color:var(--amber); }
-.mod-tracker .settings-list{ margin-top:8px; }
-.mod-tracker .machine-chip{
-  display:inline-flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border);
-  font-family:var(--mono); font-size:12.5px; padding:6px 8px 6px 10px; border-radius:7px; margin:0 6px 6px 0;
-}
-.mod-tracker .machine-chip button{ background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:13px; }
-.mod-tracker .machine-wrap{ display:flex; flex-wrap:wrap; }
-.mod-tracker .hint{ font-size:11.5px; color:var(--text-dim); margin-top:6px; line-height:1.5; }
- 
-/* ---- NEW: фото-заявки (додано разом з інтеграцією інструмента розпізнавання) ---- */
-.mod-tracker .opt-row{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
-.mod-tracker .opt-row label{ font-size:11.5px; color:var(--text-muted); flex:none; width:150px; line-height:1.3; }
-.mod-tracker .opt-row input[type=number]{
-  width:76px; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
-  border-radius:7px; padding:8px 9px; font-family:var(--mono); font-size:13px;
-}
-.mod-tracker .mode-toggle{ display:flex; gap:6px; flex:1; }
-.mod-tracker .mode-toggle button{
-  flex:1; background:var(--surface-2); border:1px solid var(--border); color:var(--text-muted);
-  border-radius:7px; padding:8px 6px; font-size:12px; font-weight:600; cursor:pointer;
-}
-.mod-tracker .mode-toggle button.active{ border-color:var(--amber); color:var(--amber); background:rgba(242,169,59,.08); }
- 
-.mod-tracker .order-cards{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:8px; }
-.mod-tracker .order-card{
-  background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--amber);
-  border-radius:10px; padding:11px 12px; cursor:pointer; transition:border-color .15s;
-}
-.mod-tracker .order-card:active{ background:var(--surface-2); }
-.mod-tracker .order-card.matched{ border-left-color:var(--green); box-shadow:0 0 10px rgba(56,201,138,.15); }
-.mod-tracker .order-card.warn{ border-left-color:var(--red); }
-.mod-tracker .order-card .oc-no{ font-family:var(--mono); font-size:10px; color:var(--text-dim); word-break:break-all; }
-.mod-tracker .order-card .oc-main{ font-family:var(--mono); font-weight:700; font-size:14.5px; color:var(--amber); margin-top:4px; line-height:1.3; word-break:break-word; }
-.mod-tracker .order-card .oc-date{ font-family:var(--mono); font-size:11px; color:var(--text-muted); margin-top:4px; }
-.mod-tracker .order-card.matched .oc-main{ color:var(--green); }
-.mod-tracker .order-card.warn .oc-main{ color:var(--red); }
-.mod-tracker .order-card .oc-match{ font-size:10.5px; font-weight:700; color:var(--green); margin-top:6px; display:flex; align-items:center; gap:4px; letter-spacing:.02em; }
-.mod-tracker .order-card .oc-waiting{ font-size:10.5px; font-weight:600; color:var(--text-dim); margin-top:6px; letter-spacing:.02em; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AI Web App Studio iOS</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Highlight.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/xml.min.js"></script>
 
-/* ---- Тумблер "Етикетку принесено" на картці заявки ---- */
-.mod-tracker .oc-brought-row{
-  display:flex; align-items:center; justify-content:space-between; gap:6px;
-  margin-top:8px; padding-top:8px; border-top:1px solid var(--border);
-}
-.mod-tracker .oc-brought-label{ font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.03em; }
-.mod-tracker .oc-brought-switch{
-  position:relative; width:34px; height:19px; border-radius:20px; background:var(--surface-3);
-  border:1px solid var(--border); flex:none; cursor:pointer; transition:background .15s, border-color .15s;
-}
-.mod-tracker .oc-brought-switch::after{
-  content:""; position:absolute; top:1px; left:1px; width:15px; height:15px; border-radius:50%;
-  background:var(--text-dim); transition:transform .15s, background .15s;
-}
-.mod-tracker .oc-brought-switch.on{ background:rgba(56,201,138,.18); border-color:var(--green); }
-.mod-tracker .oc-brought-switch.on::after{ transform:translateX(15px); background:var(--green); box-shadow:0 0 6px 1px rgba(56,201,138,.65); }
-
-.mod-tracker .order-card .oc-ilosc{ font-family:var(--mono); font-size:11px; color:var(--text-muted); margin-top:4px; }
-/* Зелена лампочка-індикатор "принесено", яка дублюється у Етикетках та Нових зліценіях */
-.mod-tracker .brought-dot{
-  width:9px; height:9px; border-radius:50%; flex:none; background:var(--surface-3); border:1px solid var(--border);
-}
-.mod-tracker .brought-dot.on{ background:var(--green); border-color:var(--green); box-shadow:0 0 6px 1px rgba(56,201,138,.65); animation:tr-pulse 2.4s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce){ .mod-tracker .brought-dot.on{ animation:none; } }
-.mod-tracker .label-row .brought-wrap{ display:flex; align-items:center; gap:5px; margin-top:4px; }
-.mod-tracker .label-row .brought-wrap span{ font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.03em; }
-
-/* ---- Нові зліценія: сині картки, стиль як у "Заявка" ---- */
-.mod-tracker .order-card.new-zlecenie{ border-left-color:#2f7cf6; }
-.mod-tracker .order-card.new-zlecenie .oc-no{ color:#5a9bff; }
-.mod-tracker .order-card.new-zlecenie .oc-main{ color:#2f7cf6; }
-.mod-tracker .order-card.new-zlecenie .oc-date{ color:#5a9bff; }
-.mod-tracker .order-card.new-zlecenie .oc-label{ font-family:var(--mono); font-size:12px; color:#2f7cf6; margin-top:6px; font-weight:700; }
-.mod-tracker .order-card.new-zlecenie .oc-label.oc-label-missing{ color:var(--text-dim); font-weight:400; }
-.mod-tracker .order-card.new-zlecenie .brought-wrap{ display:flex; align-items:center; gap:5px; margin-top:6px; }
-.mod-tracker .order-card.new-zlecenie .brought-wrap span{ font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.03em; }
-/* Картки без коду етикетки - підсвічені зеленим, щоб було видно, що очікують етикетку */
-.mod-tracker .order-card.new-zlecenie.missing-label{ border-left-color:var(--green); }
-.mod-tracker .order-card.new-zlecenie.missing-label .oc-no{ color:var(--green); }
-.mod-tracker .order-card.new-zlecenie.missing-label .oc-main{ color:var(--green); }
-.mod-tracker .order-card.new-zlecenie.missing-label .oc-date{ color:var(--green); }
-/* Щойно додані картки (перші 10 хв) - підсвічені червоним, щоб було видно свіжі надходження */
-.mod-tracker .order-card.new-zlecenie.fresh-card{ border-left-color:var(--red); }
-.mod-tracker .order-card.new-zlecenie.fresh-card .oc-no{ color:var(--red); }
-.mod-tracker .order-card.new-zlecenie.fresh-card .oc-main{ color:var(--red); }
-.mod-tracker .order-card.new-zlecenie.fresh-card .oc-date{ color:var(--red); }
-
-/* ======================= MODULE: HALE (схеми зал) ======================= */
-.mod-hale .hl-sub{ display:flex; gap:6px; margin-bottom:12px; }
-.mod-hale .hl-sub button{
-  flex:1; padding:11px 4px; cursor:pointer; background:#0e0820; color:#9a8fc7;
-  border:1.5px solid #2c2150; border-radius:10px; font-size:14px; font-weight:700; letter-spacing:.06em;
-  transition:color .2s, border-color .2s, box-shadow .2s;
-}
-.mod-hale .hl-sub button.active{
-  color:#fff; border-color:var(--c); text-shadow:0 0 8px var(--c);
-  box-shadow:0 0 12px var(--c), inset 0 0 12px color-mix(in srgb, var(--c) 35%, transparent);
-}
-.mod-hale .hl-sub button:nth-child(1){ --c:#00e5ff; }
-.mod-hale .hl-sub button:nth-child(2){ --c:#ff2bd6; }
-.mod-hale .hl-sub button:nth-child(3){ --c:#b6ff00; }
-.mod-hale .hl-legend{ display:flex; gap:14px; justify-content:center; margin:0 0 10px; font-size:12px; color:#bdb3e6; }
-.mod-hale .hl-legend span{ display:flex; align-items:center; gap:6px; }
-.mod-hale .hl-legend i{ width:12px; height:12px; border-radius:3px; border:2px solid var(--k); box-shadow:0 0 8px var(--k); }
-.mod-hale .hl-legend i.dot{ border-radius:50%; background:#39ff6a; border-color:#eaffee; box-shadow:0 0 8px #39ff6a; }
-.mod-hale .hl-view{ display:none; }
-.mod-hale .hl-view.active{ display:block; }
-.mod-hale svg{ width:100%; height:auto; display:block; }
-.mod-hale .hl-frame{
-  fill:rgba(138,91,255,.05); stroke:#8a5bff; stroke-width:3; stroke-linejoin:round;
-  filter:drop-shadow(0 0 4px #8a5bff) drop-shadow(0 0 12px rgba(138,91,255,.55));
-}
-.mod-hale .hl-wall{ fill:none; stroke:#5a3fb0; stroke-width:2; opacity:.8; }
-.mod-hale .hl-title{
-  fill:#d9c9ff; font-weight:800; letter-spacing:2px; text-anchor:middle; dominant-baseline:central;
-  filter:drop-shadow(0 0 6px #8a5bff);
-}
-.mod-hale .hl-m{ cursor:pointer; }
-.mod-hale .hl-m.S{ --k:#00e5ff; } .mod-hale .hl-m.J{ --k:#ff2bd6; } .mod-hale .hl-m.V{ --k:#b6ff00; }
-.mod-hale .hl-m rect{
-  fill:color-mix(in srgb, var(--k) 12%, #0a0618); stroke:var(--k); stroke-width:3;
-  filter:drop-shadow(0 0 3px var(--k)) drop-shadow(0 0 10px var(--k)); transition:fill .2s;
-}
-.mod-hale .hl-m:active rect{ fill:color-mix(in srgb, var(--k) 45%, #0a0618); }
-.mod-hale .hl-m text{
-  fill:#fff; font-weight:800; text-anchor:middle; dominant-baseline:central; pointer-events:none;
-  filter:drop-shadow(0 0 4px var(--k));
-}
-.mod-hale .hl-dot{ fill:#39ff6a; stroke:#eaffee; stroke-width:1.5; opacity:0; pointer-events:none;
-  filter:drop-shadow(0 0 4px #39ff6a) drop-shadow(0 0 9px #39ff6a); }
-.mod-hale .hl-m.live .hl-dot{ opacity:1; animation:hl-pulse 1.8s ease-in-out infinite; }
-@keyframes hl-pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.55; } }
-@media (prefers-reduced-motion: reduce){ .mod-hale .hl-m.live .hl-dot{ animation:none; } }
-.mod-hale .hl-count{ text-align:center; margin:0 0 10px; font-size:13px; font-weight:700; letter-spacing:.04em; color:#00e5ff; text-shadow:0 0 8px #00e5ff; }
-/* машина, на якій є зліценіє, "працює": рамка біжить по колу + заливка пульсує */
-.mod-hale .hl-m.working rect{
-  stroke-dasharray:16 9;
-  animation:hl-march 1s linear infinite, hl-fill 2.2s ease-in-out infinite;
-}
-@keyframes hl-march{ to{ stroke-dashoffset:-25; } }
-@keyframes hl-fill{
-  0%,100%{ fill:color-mix(in srgb, var(--k) 12%, #0a0618); }
-  50%{ fill:color-mix(in srgb, var(--k) 60%, #0a0618); }
-}
-@media (prefers-reduced-motion: reduce){ .mod-hale .hl-m.working rect{ animation:none; stroke-dasharray:none; } }
-
-/* інформаційна панель машини */
-.mod-tracker .hl-card{ background:var(--surface-2); border:1px solid var(--border); border-left:3px solid #2f7cf6; border-radius:8px; padding:9px 11px; margin-bottom:8px; font-size:12.5px; cursor:pointer; }
-.mod-tracker .hl-card.past{ opacity:.55; }
-.mod-tracker .hl-card-head{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px; }
-.mod-tracker .hl-num{ font-family:var(--mono); font-weight:700; font-size:13px; color:#5a9bff; word-break:break-all; }
-.mod-tracker .hl-x{ flex:none; width:22px; height:22px; padding:0; background:transparent; border:1px solid var(--amber-dim); color:var(--red); border-radius:5px; font-size:12px; line-height:1; cursor:pointer; }
-.mod-tracker .hl-xrow{ display:flex; justify-content:flex-end; margin-top:6px; }
-.mod-tracker .hl-chip.hl-overdue{ margin:0; font-size:9.5px; letter-spacing:.05em; border:1px solid var(--red); }
-.mod-tracker .hl-card.past{ border-left-color:var(--red); }
-.mod-tracker .hl-kv span.hl-label{ color:#39ff6a; font-weight:700; text-shadow:0 0 6px #39ff6a, 0 0 14px rgba(57,255,106,.7); }
-.mod-tracker .hl-brought{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px; padding-top:8px; border-top:1px solid var(--border); font-size:10.5px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.03em; }
-.mod-tracker .hl-brought .oc-brought-switch.dis{ opacity:.35; pointer-events:none; }
-.mod-tracker .hl-detail{ margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); cursor:default; }
-.mod-tracker .hl-hint{ font-size:10.5px; color:var(--text-dim); margin-top:6px; }
-.mod-tracker .hl-del{ margin-top:8px; width:100%; background:transparent; color:var(--red); border:1px solid var(--amber-dim); border-radius:7px; padding:7px; font-size:12px; font-weight:600; cursor:pointer; }
-.mod-tracker .hl-del:active{ background:rgba(227,91,61,.12); }
-.mod-tracker .hl-head{ display:flex; align-items:center; gap:10px; margin-bottom:4px; }
-.mod-tracker .hl-head h2{ margin:0; font-size:20px; font-family:var(--mono); }
-.mod-tracker .hl-live{
-  font-size:10.5px; font-weight:700; color:#39ff6a; display:flex; align-items:center; gap:5px; letter-spacing:.04em;
-}
-.mod-tracker .hl-live::before{ content:""; width:9px; height:9px; border-radius:50%; background:#39ff6a; box-shadow:0 0 8px 2px rgba(57,255,106,.7); }
-.mod-tracker .hl-close{ margin-left:auto; background:transparent; border:none; color:var(--text-dim); font-size:18px; padding:4px 8px; cursor:pointer; }
-.mod-tracker .hl-sec{ margin-top:16px; }
-.mod-tracker .hl-sec-title{
-  font-size:11.5px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em;
-  border-bottom:1px solid var(--border); padding-bottom:5px; margin-bottom:8px; display:flex; justify-content:space-between;
-}
-.mod-tracker .hl-item{ background:var(--surface-2); border:1px solid var(--border); border-left:3px solid var(--amber); border-radius:8px; padding:9px 11px; margin-bottom:8px; font-size:12.5px; }
-.mod-tracker .hl-item.zl{ border-left-color:#ff9f1c; }
-.mod-tracker .hl-item.no{ border-left-color:#2f7cf6; }
-.mod-tracker .hl-item.ok{ border-left-color:var(--green); }
-.mod-tracker .hl-item.lb{ border-left-color:var(--green); }
-.mod-tracker .hl-kv{ display:flex; justify-content:space-between; gap:10px; padding:2px 0; }
-.mod-tracker .hl-kv span:first-child{ color:var(--text-dim); flex:none; }
-.mod-tracker .hl-kv span:last-child{ text-align:right; font-family:var(--mono); word-break:break-word; }
-.mod-tracker .hl-big{ font-family:var(--mono); font-size:24px; font-weight:700; margin-bottom:4px; }
-.mod-tracker .hl-empty{ color:var(--text-dim); font-size:12px; padding:4px 0; }
-.mod-tracker .hl-chip{ display:inline-block; font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:20px; margin:4px 4px 0 0; background:var(--surface-3); color:var(--text-muted); }
-.mod-tracker .hl-chip.g{ color:var(--green); background:rgba(56,201,138,.12); }
-.mod-tracker .hl-chip.r{ color:var(--red); background:rgba(227,91,61,.12); }
-</style>
-</head>
-<body>
-<div class="app">
- 
-  <header class="top">
-    <div class="brand">
-      <div class="lamp" id="headerLamp"></div>
-      <h1>Виробництво</h1>
-      <span id="clock">—</span>
-    </div>
-    <div class="tabs">
-      <button class="tab active" data-tab="hale">Hale</button>
-      <button class="tab" data-tab="zlyttya">Злиття</button>
-      <button class="tab" data-tab="neworders">Нові зліценія</button>
-      <button class="tab" data-tab="orders">Заявки</button>
-      <button class="tab" data-tab="labels">Етикетки</button>
-      <button class="tab" data-tab="settings">Налаштування</button>
-    </div>
-  </header>
- 
-  <main>
-    <!-- ======================= ЗЛИТТЯ ======================= -->
-    <section id="view-zlyttya" class="mod-zlyttya">
-      <div class="toolbar">
-        <button class="btn btn-primary btn-add-machine" id="openAddPanelBtn">+ Добавить машину</button>
-      </div>
-      <div id="emptyState" class="empty-state" style="display:none;">
-        <div class="big">🪣</div>
-        Пока нет машин под контролем.<br>Добавьте первую машину кнопкой выше.
-      </div>
-      <section class="cards" id="cardsWrap"></section>
-    </section>
- 
-    <!-- ======================= НОВІ ЗЛІЦЕНІЯ (фото → AI → короткі картки) ======================= -->
-    <section id="view-neworders" class="mod-tracker">
-      <div class="toolbar">
-        <button class="btn btn-primary" id="btnAddNewOrder">+ Додати фото зліценій</button>
-        <button class="btn btn-danger" id="btnClearNewOrders">Очистити все</button>
-      </div>
-      <div class="order-cards" id="newOrdersList"></div>
-    </section>
-
-    <!-- ======================= ЗАЯВКИ (фото → AI → структуровані картки) ======================= -->
-    <section id="view-orders" class="mod-tracker">
-      <div class="toolbar">
-        <button class="btn btn-primary" id="btnAddOrder">+ Додати фото заявок</button>
-        <button class="btn" id="btnPrintOrders">🖨️ Друк</button>
-        <button class="btn btn-danger" id="btnClearOrders">Очистити все</button>
-      </div>
-      <div class="order-cards" id="ordersList"></div>
-    </section>
- 
-    <!-- ======================= ЕТИКЕТКИ ======================= -->
-    <section id="view-labels" class="mod-tracker">
-      <div class="toolbar">
-        <button class="btn btn-primary" id="btnAddLabels">+ Додати етикетки</button>
-        <button class="btn btn-danger" id="btnClearLabels">Очистити все</button>
-      </div>
-      <div id="labelsList"></div>
-    </section>
- 
-    <!-- ======================= НАЛАШТУВАННЯ ======================= -->
-    <section id="view-settings" class="mod-tracker">
-      <div class="field">
-        <label>API ключі Gemini (розпізнавання фото) · перемикання вручну</label>
-        <div id="apiKeysWrap"></div>
-        <div class="status-line" id="apiKeysStatus">Оберіть точкою активний ключ. Модель: gemini-3.5-flash-lite.</div>
-        <div class="hint">Ключі зберігаються тільки на цьому пристрої і не потрапляють у спільну базу.</div>
-      </div>
-      <div class="field">
-        <label>Додати номер машини (для заявок/етикеток)</label>
-        <div class="row2">
-          <input type="text" id="newMachineInput" placeholder="напр. J124W">
-          <button class="btn" id="btnAddMachine" style="flex:none;">Додати</button>
-        </div>
-      </div>
-      <div class="field">
-        <label>Список машин (<span id="machineCount">0</span>)</label>
-        <div class="machine-wrap settings-list" id="machinesList"></div>
-      </div>
-      <button class="btn btn-danger btn-block" id="btnResetMachines">Скинути список машин до типового</button>
-    </section>
-    <!-- ======================= HALE (схеми зал) ======================= -->
-    <section id="view-hale" class="mod-hale active">
-      <div class="hl-sub" id="haleSub"></div>
-      <div class="hl-legend">
-        <span style="--k:#00e5ff"><i></i>S</span>
-        <span style="--k:#ff2bd6"><i></i>J</span>
-        <span style="--k:#b6ff00"><i></i>V</span>
-        <span><i class="dot"></i>у злитті</span>
-      </div>
-      <div class="hl-count" id="haleCount"></div>
-      <div id="haleViews"></div>
-    </section>
-
-  </main>
- 
-  <footer>Дані спільні для всіх, хто відкриває це посилання, і оновлюються автоматично в реальному часі.</footer>
-</div>
- 
-<!-- ======================= МОДАЛКИ: ЗЛИТТЯ ======================= -->
-<div id="addOverlay" class="mod-zlyttya detail-overlay">
-  <div class="detail-modal add-modal">
-    <div class="calc-modal-head">
-      <span>Добавить машину</span>
-      <button type="button" class="icon-btn" id="addPanelClose" title="Закрыть">✕</button>
-    </div>
-    <div class="form-grid">
-      <div class="field">
-        <label for="f-machine">Номер машины</label>
-        <input type="text" id="f-machine" placeholder="" inputmode="text">
-      </div>
-      <div class="field">
-        <label for="f-total">Кол-во на злитті (шт)</label>
-        <input type="number" id="f-total" placeholder="" min="1" step="1" inputmode="numeric" pattern="[0-9]*">
-      </div>
-      <div class="field">
-        <label for="f-perPallet">Шт на палете</label>
-        <input type="number" id="f-perPallet" placeholder="" min="1" step="1" inputmode="numeric" pattern="[0-9]*">
-      </div>
-      <div class="field">
-        <label for="f-palletNum">Текущая (незаконч.) палета №</label>
-        <input type="number" id="f-palletNum" placeholder="" min="1" step="1" inputmode="numeric" pattern="[0-9]*">
-      </div>
-      <div class="field">
-        <label for="f-onCurrent">
-          Шт на текущей палете
-          <button type="button" class="calc-trigger" id="calcTrigger" title="Калькулятор палеты">🖲️</button>
-        </label>
-        <input type="number" id="f-onCurrent" placeholder="" min="0" step="1" inputmode="numeric" pattern="[0-9]*">
-      </div>
-      <div class="field">
-        <label for="f-cycle">Цикл 1 ведра (сек)</label>
-        <input type="text" id="f-cycle" placeholder="" inputmode="decimal">
-      </div>
-      <div class="field">
-        <label for="f-zlittyaNum">Номер злиття</label>
-        <input type="number" id="f-zlittyaNum" placeholder="" min="0" step="1" inputmode="numeric" pattern="[0-9]*">
-      </div>
-      <div class="field">
-        <label for="f-etiketkaNum">Номер етикетки</label>
-        <input type="number" id="f-etiketkaNum" placeholder="" min="0" step="1" inputmode="numeric" pattern="[0-9]*">
-      </div>
-    </div>
-    <div class="form-actions">
-      <button class="btn btn-primary" id="addBtn">Записать машину</button>
-      <span class="form-error" id="formError"></span>
-    </div>
-  </div>
-</div>
- 
-<div id="calcOverlay" class="mod-zlyttya calc-overlay">
-  <div class="calc-modal">
-    <div class="calc-modal-head">
-      <span>🖲️ Калькулятор палеты</span>
-      <button type="button" class="icon-btn" id="calcClose" title="Закрыть">✕</button>
-    </div>
-    <div class="calc-body">
-      <div class="field">
-        <label for="calc-inStack">Кол-во в стопке (шт)</label>
-        <input type="number" id="calc-inStack" placeholder="" min="0" step="1" inputmode="numeric" pattern="[0-9]*">
-      </div>
-      <div class="field">
-        <label for="calc-stacks">Кол-во стопок</label>
-        <input type="number" id="calc-stacks" placeholder="" min="0" step="1" inputmode="numeric" pattern="[0-9]*">
-      </div>
-      <div class="field">
-        <label for="calc-extra">Дополнительно (шт)</label>
-        <input type="number" id="calc-extra" placeholder="" min="0" step="1" inputmode="numeric" pattern="[0-9]*">
-      </div>
-      <div class="calc-result">
-        <span>Результат:</span>
-        <b id="calcResultVal">0</b>
-      </div>
-    </div>
-    <div class="calc-modal-actions">
-      <button type="button" class="btn btn-primary" id="calcApply">Добавить</button>
-      <button type="button" class="btn btn-ghost" id="calcCancel">Отмена</button>
-    </div>
-  </div>
-</div>
- 
-<div id="detailOverlay" class="mod-zlyttya detail-overlay">
-  <div class="detail-modal" id="detailModal"></div>
-</div>
- 
-<!-- ======================= МОДАЛКИ: ТРЕКЕР ======================= -->
-<div class="mod-tracker overlay" id="overlayOrderDetail">
-  <div class="modal">
-    <h2>Заявка<span class="sub" id="odSub"></span></h2>
-    <div class="row2">
-      <div class="field"><label>Дата початку</label><input type="text" id="odDate" placeholder="дд.мм.рррр"></div>
-      <div class="field"><label>Машина</label><select id="odMachine"></select></div>
-    </div>
-    <div class="field"><label>Numer zlecenia</label><input type="text" id="odNumer"></div>
-    <div class="field"><label>Numer katalogowy</label><input type="text" id="odKatalogowy"></div>
-    <div class="field"><label>Nazwa</label><input type="text" id="odNazwa"></div>
-    <div class="field"><label>Uwagi do zamówienia (код етикетки)</label><input type="text" id="odLabel"></div>
-    <div class="field"><label>Uwagi do zlecenia</label><input type="text" id="odUwagiZlecenia"></div>
-    <div class="field"><label>Ilość na zleceniu</label><input type="text" id="odIlosc"></div>
-    <div class="modal-actions">
-      <button class="btn btn-danger" id="odDelete">Видалити</button>
-      <button class="btn btn-ghost" id="odCancel">Закрити</button>
-      <button class="btn btn-primary" id="odSave">Зберегти</button>
-    </div>
-  </div>
-</div>
- 
-<div class="mod-tracker overlay" id="overlayAddOrder">
-  <div class="modal">
-    <h2>Додати заявки<span class="sub">Фото екрана HermesSQL — розпізнавання через AI</span></h2>
- 
-    <div class="opt-row">
-      <label>Фото в 1 запиті (1–20)</label>
-      <input type="number" id="aoBatchSize" min="1" max="20" value="4">
-    </div>
-    <div class="opt-row">
-      <label>Спосіб об'єднання</label>
-      <div class="mode-toggle" id="aoModeToggle">
-        <button data-v="collage" class="active" type="button">Колаж (JPG)</button>
-        <button data-v="pdf" type="button">PDF</button>
-      </div>
-    </div>
- 
-    <div class="method-grid">
-      <label class="method-btn" for="aoGallery"><span class="ic">🖼️</span>З галереї</label>
-      <label class="method-btn" for="aoCamera"><span class="ic">📷</span>Зробити фото</label>
-    </div>
-    <input type="file" id="aoGallery" accept="image/*" multiple style="display:none;">
-    <input type="file" id="aoCamera" accept="image/*" capture="environment" style="display:none;">
-    <div class="thumbs" id="aoThumbs"></div>
-    <div class="status-line" id="aoStatus"></div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" id="aoCancel">Скасувати</button>
-      <button class="btn btn-primary" id="aoRecognize">Розпізнати</button>
-    </div>
-    <div id="aoReviewWrap" style="display:none;">
-      <div class="divider">Знайдені заявки</div>
-      <div id="aoReviewList"></div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" id="aoBack">Назад</button>
-        <button class="btn btn-primary" id="aoSaveAll">Зберегти всі</button>
-      </div>
-    </div>
-  </div>
-</div>
- 
-<div class="mod-tracker overlay" id="overlayAddNewOrder">
-  <div class="modal">
-    <h2>Додати нові зліценія<span class="sub">Фото екрана HermesSQL — розпізнавання через AI</span></h2>
-
-    <div class="method-grid">
-      <label class="method-btn" for="anoGallery"><span class="ic">🖼️</span>З галереї (до 10)</label>
-      <label class="method-btn" for="anoCamera"><span class="ic">📷</span>Зробити фото</label>
-    </div>
-    <input type="file" id="anoGallery" accept="image/*" multiple style="display:none;">
-    <input type="file" id="anoCamera" accept="image/*" capture="environment" style="display:none;">
-    <div class="thumbs" id="anoThumbs"></div>
-    <div class="status-line" id="anoStatus"></div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" id="anoCancel">Скасувати</button>
-      <button class="btn btn-primary" id="anoRecognize">Розпізнати</button>
-    </div>
-    <div id="anoReviewWrap" style="display:none;">
-      <div class="divider">Знайдені зліценія</div>
-      <div id="anoReviewList"></div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" id="anoBack">Назад</button>
-        <button class="btn btn-primary" id="anoSaveAll">Зберегти всі</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="mod-tracker overlay" id="overlayAddLabels">
-  <div class="modal">
-    <h2>Додати етикетки<span class="sub">Коди з коробок / список кодів</span></h2>
-    <div class="field">
-      <label>Вставити список кодів</label>
-      <textarea id="alText" placeholder="напр. (G076533) (G063984) ... або E077433, 073042"></textarea>
-    </div>
-    <div class="divider">або фото</div>
-    <div class="method-grid">
-      <label class="method-btn" for="alGallery"><span class="ic">🖼️</span>З галереї</label>
-      <label class="method-btn" for="alCamera"><span class="ic">📷</span>Зробити фото</label>
-    </div>
-    <input type="file" id="alGallery" accept="image/*" multiple style="display:none;">
-    <input type="file" id="alCamera" accept="image/*" capture="environment" style="display:none;">
-    <div class="thumbs" id="alThumbs"></div>
-    <div class="status-line" id="alStatus"></div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" id="alCancel">Скасувати</button>
-      <button class="btn btn-primary" id="alRecognize">Розпізнати</button>
-    </div>
-    <div id="alReviewWrap" style="display:none;">
-      <div class="divider">Знайдені коди</div>
-      <div id="alReviewList"></div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" id="alBack">Назад</button>
-        <button class="btn btn-primary" id="alSaveAll">Зберегти всі</button>
-      </div>
-    </div>
-  </div>
-</div>
- 
-<!-- ======================= МОДАЛКА: HALE (інфо по машині) ======================= -->
-<div class="mod-tracker overlay" id="overlayHale">
-  <div class="modal" id="haleModal"></div>
-</div>
-
-<script>
-/* ======================= ЗАГАЛЬНА ІНІЦІАЛІЗАЦІЯ (спільна для обох модулів) ======================= */
-if (window.Telegram && window.Telegram.WebApp) {
-  const tg = window.Telegram.WebApp;
-  tg.ready();
-  tg.expand();
-  if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
-  if (tg.setHeaderColor) { try { tg.setHeaderColor('#14171a'); } catch (e) {} }
-  if (tg.setBackgroundColor) { try { tg.setBackgroundColor('#14171a'); } catch (e) {} }
-}
- 
-const SUPABASE_URL = 'https://scwtoxypbdmlwdoifvmp.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjd3RveHlwYmRtbHdkb2lmdm1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0NDAwMjcsImV4cCI6MjEwMjAxNjAyN30.z0xH6w7MY4afcB-YcgbpCWbs9OiBFODg0r_BGp7JN7g';
- 
-let sb = null;
-if (window.supabase) {
-  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-} else {
-  document.addEventListener('DOMContentLoaded', function () {
-    alert("Не вдалося завантажити бібліотеку зв'язку з сервером. Перевірте інтернет і перезавантажте сторінку.");
-  });
-}
- 
-// Обидва модулі використовують ОДНУ таблицю Supabase ("machines"),
-// але кожен запис має власне поле data.kind, яке відрізняє:
-//  - 'zlyttya'              -> картки контролю злиття (модуль "Злиття")
-//  - 'order'                -> заявка (модуль "Заявки")
-//  - 'label'                -> код етикетки (модуль "Етикетки")
-//  - 'tracker_machine_list' -> один запис зі списком машин для заявок/етикеток
-// Записи, зроблені до цього оновлення, не мають поля kind і трактуються як 'zlyttya'
-// (щоб старі дані з контролю злиття лишились на місці).
-const TABLE = 'machines';
- 
-/* ======================= ТАБИ ======================= */
-document.querySelectorAll(".tab").forEach(t => {
-  t.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-    document.querySelectorAll("main section").forEach(x=>x.classList.remove("active"));
-    t.classList.add("active");
-    document.getElementById("view-" + t.dataset.tab).classList.add("active");
-  });
-});
- 
-/* ======================= МОДУЛЬ "ЗЛИТТЯ" ======================= */
-(function () {
-  if (!sb) return;
- 
-  const LOCAL_CACHE_KEY = 'zlittya_machines_cache_v1';
- 
-  function loadCachedMachines() {
-    try {
-      const raw = localStorage.getItem(LOCAL_CACHE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) { return []; }
-  }
-  function saveCachedMachines(list) {
-    try { localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(list)); } catch (e) {}
-  }
- 
-  function rowToMachine(row) {
-    return Object.assign({}, row.data, { id: row.id });
-  }
- 
-  async function fetchMachinesFromServer() {
-    const { data, error } = await sb.from(TABLE).select('id, data').order('id', { ascending: true });
-    if (error) { console.error('Ошибка загрузки из Supabase', error); return null; }
-    // Показуємо лише записи модуля "Злиття": без kind (старі записи) або kind === 'zlyttya'.
-    return data.map(rowToMachine).filter(m => !m.kind || m.kind === 'zlyttya');
-  }
- 
-  async function insertMachineOnServer(machineData) {
-    const payload = Object.assign({ kind: 'zlyttya' }, machineData);
-    const { data, error } = await sb.from(TABLE).insert({ data: payload }).select('id, data').single();
-    if (error) { console.error('Ошибка добавления в Supabase', error); return null; }
-    return rowToMachine(data);
-  }
- 
-  async function deleteMachineOnServer(id) {
-    const { error } = await sb.from(TABLE).delete().eq('id', id);
-    if (error) { console.error('Ошибка удаления в Supabase', error); return false; }
-    return true;
-  }
- 
-  let machines = loadCachedMachines();
-  let pendingDeleteId = null;
- 
-  // Міст для вкладки Hale: віддає картки злиття з обрахунками (тільки читання).
-  window.__zlGet = function () {
-    return machines.map(function (m) {
-      var c = computeMachine(m);
-      return { m: m, c: c, st: stateFor(c.remainingSeconds, c.remainingPieces) };
-    });
-  };
- 
-  // Міст для вкладки Hale: видалення картки злиття (з підтвердженням у самій панелі Hale).
-  window.__zlDelete = function (id) {
-    const backup = machines;
-    machines = machines.filter(m => String(m.id) !== String(id));
-    saveCachedMachines(machines);
-    render();
-    return deleteMachineOnServer(id).then(function (ok) {
-      if (!ok) {
-        machines = backup;
-        saveCachedMachines(machines);
-        render();
-        alert('Не вдалося видалити на сервері. Перевірте інтернет.');
-      }
-      return ok;
-    });
-  };
-
-  function parseDecimal(str) {
-    if (typeof str !== 'string') return NaN;
-    return parseFloat(str.trim().replace(',', '.'));
-  }
-  function fmtNum(n) { return new Intl.NumberFormat('ru-RU').format(Math.round(n)); }
-  function pad(n) { return n < 10 ? '0' + n : '' + n; }
-  function fmtDuration(totalSeconds) {
-    if (totalSeconds <= 0) return '00:00:00';
-    const s = Math.floor(totalSeconds);
-    const days = Math.floor(s / 86400);
-    const hrs = Math.floor((s % 86400) / 3600);
-    const mins = Math.floor((s % 3600) / 60);
-    const secs = s % 60;
-    if (days > 0) return `${days}д ${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
-    return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
-  }
-  function fmtDateTime(date) {
-    return `${pad(date.getDate())}.${pad(date.getMonth()+1)}.${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-  }
-  function fmtTimeOnly(date) { return `${pad(date.getHours())}:${pad(date.getMinutes())}`; }
- 
-  function computeMachine(m) {
-    const fullPallets = Math.max(m.palletNum - 1, 0);
-    const doneAtEntry = (fullPallets * m.perPallet) + m.onCurrent;
-    const elapsedSeconds = Math.max((Date.now() - m.enteredAt) / 1000, 0);
-    const producedSinceEntry = Math.floor(elapsedSeconds / m.cycle);
-    const done = Math.min(doneAtEntry + producedSinceEntry, m.total);
-    const remainingPieces = Math.max(m.total - done, 0);
-    const remainingSecondsAtEntry = Math.max(m.total - doneAtEntry, 0) * m.cycle;
-    const finishDate = new Date(m.enteredAt + remainingSecondsAtEntry * 1000);
-    const remainingSeconds = Math.max((finishDate.getTime() - Date.now()) / 1000, 0);
-    const progress = m.total > 0 ? Math.min(done / m.total, 1) : 0;
-    return { done, remainingPieces, remainingSeconds, finishDate, progress };
-  }
- 
-  function stateFor(remainingSeconds, remainingPieces) {
-    if (remainingPieces <= 0) return 'done';
-    if (remainingSeconds <= 5 * 60) return 'danger';
-    if (remainingSeconds <= 20 * 60) return 'warn';
-    return 'ok';
-  }
-  function statusLabel(state) {
-    switch (state) {
-      case 'done': return 'Готово';
-      case 'danger': return 'Срочно';
-      case 'warn': return 'Скоро';
-      default: return 'В работе';
-    }
-  }
- 
-  const cardsWrap = document.getElementById('cardsWrap');
-  const emptyState = document.getElementById('emptyState');
-  const detailOverlay = document.getElementById('detailOverlay');
-  const detailModal = document.getElementById('detailModal');
-  let openDetailId = null;
- 
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
- 
-  function render() {
-    if (machines.length === 0) {
-      emptyState.style.display = 'block';
-      cardsWrap.innerHTML = '';
-    } else {
-      emptyState.style.display = 'none';
-      cardsWrap.innerHTML = machines.map((m) => {
-        const calc = computeMachine(m);
-        const state = stateFor(calc.remainingSeconds, calc.remainingPieces);
-        return `
-          <div class="tile state-${state}" data-action="open-detail" data-id="${m.id}">
-            <div class="tile-name">🏭 ${escapeHtml(m.machine)}</div>
-            <div class="tile-countdown">${fmtDuration(calc.remainingSeconds)}</div>
-            <div class="tile-progress"><div class="tile-progress-fill" style="width:${(calc.progress*100).toFixed(1)}%"></div></div>
-            <div class="tile-remaining">${fmtNum(calc.remainingPieces)}<span>шт до конца</span></div>
-            <div class="tile-finish">Конец злиття<b>${fmtTimeOnly(calc.finishDate)}</b></div>
-          </div>
-        `;
-      }).join('');
-    }
-    if (openDetailId !== null) renderDetail();
-  }
- 
-  function renderDetail() {
-    const m = machines.find(x => String(x.id) === String(openDetailId));
-    if (!m) { closeDetail(); return; }
-    const calc = computeMachine(m);
-    const state = stateFor(calc.remainingSeconds, calc.remainingPieces);
-    const isPendingDelete = String(pendingDeleteId) === String(m.id);
- 
-    detailModal.className = `detail-modal state-${state}`;
-    detailModal.innerHTML = `
-      <div class="card-top">
-        <div class="machine-name">🏭 ${escapeHtml(m.machine)}
-          <span class="status-chip">${statusLabel(state)}</span>
-        </div>
-        <button class="icon-btn" data-action="close-detail" title="Закрыть">✕</button>
-      </div>
-      <div class="countdown">${fmtDuration(calc.remainingSeconds)}</div>
-      <div class="countdown-label">Обратный отсчёт до конца злиття</div>
-      <div class="progress-bar"><div class="progress-bar-fill" style="width:${(calc.progress*100).toFixed(1)}%"></div></div>
-      <div class="stat-row">
-        <div class="stat-box"><div class="v">${fmtNum(calc.remainingPieces)}</div><div class="l">Шт до конца (остаток)</div></div>
-        <div class="stat-box"><div class="v">${fmtNum(calc.done)} / ${fmtNum(m.total)}</div><div class="l">Сделано / Всего</div></div>
-      </div>
-      <div class="finish-time"><span>Точное время конца злиття:</span><b>${fmtDateTime(calc.finishDate)}</b></div>
-      <div class="meta-note">Незаконч. палета №${m.palletNum} · ${m.onCurrent}/${m.perPallet} шт · цикл ${String(m.cycle).replace('.', ',')} с</div>
-      ${(m.zlittyaNum || m.etiketkaNum) ? `
-      <div class="meta-note">${m.zlittyaNum ? `Злиття №${m.zlittyaNum}` : ''}${m.zlittyaNum && m.etiketkaNum ? ' · ' : ''}${m.etiketkaNum ? `Етикетка №${m.etiketkaNum}` : ''}</div>
-      ` : ''}
-      <div class="detail-delete-row">
-        ${isPendingDelete ? `
-          <div class="confirm-delete">
-            <span>Удалить машину «${escapeHtml(m.machine)}»?</span>
-            <div class="confirm-delete-actions">
-              <button class="btn btn-danger" data-action="confirm-delete" data-id="${m.id}">Удалить</button>
-              <button class="btn btn-ghost" data-action="cancel-delete" data-id="${m.id}">Отмена</button>
-            </div>
-          </div>
-        ` : `<button class="btn btn-ghost" data-action="delete" data-id="${m.id}">Удалить машину</button>`}
-      </div>
-    `;
-  }
- 
-  function openDetail(id) { openDetailId = id; pendingDeleteId = null; renderDetail(); detailOverlay.classList.add('open'); }
-  function closeDetail() { openDetailId = null; pendingDeleteId = null; detailOverlay.classList.remove('open'); }
- 
-  cardsWrap.addEventListener('click', function (e) {
-    const tile = e.target.closest('[data-action="open-detail"]');
-    if (tile) openDetail(tile.dataset.id);
-  });
- 
-  detailOverlay.addEventListener('click', function (e) {
-    if (e.target === detailOverlay) { closeDetail(); return; }
-    if (e.target.closest('[data-action="close-detail"]')) { closeDetail(); return; }
-    const btn = e.target.closest('[data-action="delete"]');
-    if (btn) { pendingDeleteId = btn.dataset.id; renderDetail(); return; }
-    const yesBtn = e.target.closest('[data-action="confirm-delete"]');
-    if (yesBtn) {
-      const id = yesBtn.dataset.id;
-      const backup = machines;
-      machines = machines.filter(m => String(m.id) !== String(id));
-      saveCachedMachines(machines);
-      closeDetail();
-      render();
-      deleteMachineOnServer(id).then(function (ok) {
-        if (!ok) {
-          machines = backup;
-          saveCachedMachines(machines);
-          render();
-          formError.textContent = 'Не удалось удалить на сервере. Проверьте интернет.';
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        iosBg: '#000000',
+                        iosCard: '#1c1c1e',
+                        iosCardSecondary: '#2c2c2e',
+                        iosBlue: '#0a84ff',
+                        iosGreen: '#30d158',
+                        iosRed: '#ff453a'
+                    }
+                }
+            }
         }
-      });
-      return;
-    }
-    if (e.target.closest('[data-action="cancel-delete"]')) { pendingDeleteId = null; renderDetail(); }
-  });
- 
-  const formError = document.getElementById('formError');
-  const addBtn = document.getElementById('addBtn');
-  addBtn.addEventListener('click', async function () {
-    formError.textContent = '';
-    const machine = document.getElementById('f-machine').value.trim();
-    const total = parseInt(document.getElementById('f-total').value, 10);
-    const perPallet = parseInt(document.getElementById('f-perPallet').value, 10);
-    const palletNum = parseInt(document.getElementById('f-palletNum').value, 10);
-    const onCurrent = parseInt(document.getElementById('f-onCurrent').value, 10);
-    const cycle = parseDecimal(document.getElementById('f-cycle').value);
-    const zlittyaNumRaw = document.getElementById('f-zlittyaNum').value;
-    const etiketkaNumRaw = document.getElementById('f-etiketkaNum').value;
-    const zlittyaNum = zlittyaNumRaw === '' ? null : parseInt(zlittyaNumRaw, 10);
-    const etiketkaNum = etiketkaNumRaw === '' ? null : parseInt(etiketkaNumRaw, 10);
- 
-    if (!machine) { formError.textContent = 'Укажите номер машины.'; return; }
-    if (!total || total <= 0) { formError.textContent = 'Укажите кол-во на злитті.'; return; }
-    if (!perPallet || perPallet <= 0) { formError.textContent = 'Укажите кол-во шт на палете.'; return; }
-    if (!palletNum || palletNum < 1) { formError.textContent = 'Укажите номер текущей (незаконченной) палеты.'; return; }
-    if (isNaN(onCurrent) || onCurrent < 0) { formError.textContent = 'Укажите кол-во шт на текущей палете.'; return; }
-    if (!cycle || cycle <= 0) { formError.textContent = 'Укажите время цикла (сек).'; return; }
- 
-    const machineData = {
-      machine, total, perPallet, palletNum, onCurrent, cycle,
-      zlittyaNum, etiketkaNum, enteredAt: Date.now(), createdAt: Date.now()
-    };
- 
-    addBtn.disabled = true;
-    addBtn.textContent = 'Записываем…';
-    const created = await insertMachineOnServer(machineData);
-    addBtn.disabled = false;
-    addBtn.textContent = 'Записать машину';
- 
-    if (!created) { formError.textContent = 'Не удалось сохранить на сервере. Проверьте интернет и попробуйте снова.'; return; }
- 
-    machines.push(created);
-    saveCachedMachines(machines);
-    render();
-    clearForm();
-    closeAddPanel();
-  });
- 
-  function clearForm() {
-    ['f-machine','f-total','f-perPallet','f-palletNum','f-onCurrent','f-cycle','f-zlittyaNum','f-etiketkaNum']
-      .forEach(id => document.getElementById(id).value = '');
-    formError.textContent = '';
-  }
- 
-  const addOverlay = document.getElementById('addOverlay');
-  function openAddPanel() { addOverlay.classList.add('open'); document.getElementById('f-machine').focus(); }
-  function closeAddPanel() { addOverlay.classList.remove('open'); }
- 
-  document.getElementById('openAddPanelBtn').addEventListener('click', openAddPanel);
-  document.getElementById('addPanelClose').addEventListener('click', function () { clearForm(); closeAddPanel(); });
-  addOverlay.addEventListener('click', function (e) { if (e.target === addOverlay) { clearForm(); closeAddPanel(); } });
- 
-  const calcOverlay = document.getElementById('calcOverlay');
-  const calcInStack = document.getElementById('calc-inStack');
-  const calcStacks = document.getElementById('calc-stacks');
-  const calcExtra = document.getElementById('calc-extra');
-  const calcResultVal = document.getElementById('calcResultVal');
- 
-  function calcCompute() {
-    const inStack = parseInt(calcInStack.value, 10) || 0;
-    const stacks = parseInt(calcStacks.value, 10) || 0;
-    const extra = parseInt(calcExtra.value, 10) || 0;
-    const result = (inStack * stacks) + extra;
-    calcResultVal.textContent = fmtNum(result);
-    return result;
-  }
-  function openCalc() {
-    calcInStack.value = ''; calcStacks.value = ''; calcExtra.value = '';
-    calcResultVal.textContent = '0';
-    calcOverlay.classList.add('open');
-    calcInStack.focus();
-  }
-  function closeCalc() { calcOverlay.classList.remove('open'); }
- 
-  document.getElementById('calcTrigger').addEventListener('click', openCalc);
-  document.getElementById('calcClose').addEventListener('click', closeCalc);
-  document.getElementById('calcCancel').addEventListener('click', closeCalc);
-  calcOverlay.addEventListener('click', function (e) { if (e.target === calcOverlay) closeCalc(); });
-  [calcInStack, calcStacks, calcExtra].forEach(el => el.addEventListener('input', calcCompute));
-  document.getElementById('calcApply').addEventListener('click', function () {
-    document.getElementById('f-onCurrent').value = calcCompute();
-    closeCalc();
-  });
- 
-  function tickClock() {
-    document.getElementById('clock').textContent = fmtDateTime(new Date());
-  }
- 
-  setInterval(function () { tickClock(); render(); }, 1000);
-  tickClock();
-  render();
- 
-  async function syncFromServer() {
-    const fresh = await fetchMachinesFromServer();
-    if (fresh !== null) { machines = fresh; saveCachedMachines(machines); render(); }
-  }
-  syncFromServer();
- 
-  sb.channel('zlyttya-changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, function () { syncFromServer(); })
-    .subscribe();
-})();
- 
-/* ======================= МОДУЛЬ "ТРЕКЕР ЗАЯВОК/ЕТИКЕТОК" ======================= */
-(function(){
-  "use strict";
-  if (!sb) return;
- 
-  const DEFAULT_MACHINES = "J119W S104W S101P S103W J118P J117P S107W J115P J122P J116P J120W S111W S108W J121W S99W J126W S110W S105P S114P S112P S97W S96W V93W S109W S100W S98W J124W J123W V91W V95P S126W S63W S106 J130 J127 S128 J129 S125 S113".split(/\s+/);
- 
-  const LS_APIKEYS = "flt_gemini_keys_v1";
-  const LS_ACTIVE_KEY = "flt_gemini_active_v1";
-  const LS_BATCH_SIZE = "flt_photo_batch_size_v1";
-  const LS_BATCH_MODE = "flt_photo_batch_mode_v1";
-  const GEMINI_MODEL = "gemini-3.5-flash-lite";
- 
-  function loadApiKeys(){
-    const raw = JSON.parse(localStorage.getItem(LS_APIKEYS) || "null") || [];
-    const arr = raw.slice(0,5);
-    while(arr.length < 5) arr.push("");
-    return arr;
-  }
-  function loadBatchSize(){
-    const v = parseInt(localStorage.getItem(LS_BATCH_SIZE), 10);
-    return (v >= 1 && v <= 20) ? v : 4;
-  }
-  function loadBatchMode(){
-    const v = localStorage.getItem(LS_BATCH_MODE);
-    return v === 'pdf' ? 'pdf' : 'collage';
-  }
- 
-  const state = {
-    orders: [],
-    newOrders: [],
-    labels: [],
-    machines: DEFAULT_MACHINES.slice(),
-    apiKeys: loadApiKeys(),
-    activeKeyIndex: Number(localStorage.getItem(LS_ACTIVE_KEY) || "0"),
-    machineListRowId: null,
-    batchSize: loadBatchSize(),
-    batchMode: loadBatchMode()
-  };
- 
-  // Міст для вкладки Hale: віддає стан трекера (заявки, нові зліценія, етикетки) - тільки читання.
-  window.__trGet = function () { return state; };
-  // Міст для вкладки Hale: видалення заявки / зліценія / етикетки за id.
-  // Міст для вкладки Hale: перемикач "Етикетку принесено" на заявці.
-  window.__trToggleBrought = async function (id) {
-    const o = state.orders.find(x => String(x.id) === String(id));
-    if (!o) return false;
-    const updated = await updateTrackerRow(o.id, 'order', {
-      date: o.date, machine: o.machine, numerZlecenia: o.numerZlecenia,
-      nrKatalogowy: o.nrKatalogowy, nazwaProduktu: o.nazwaProduktu, labelCode: o.labelCode,
-      uwagiZlecenia: o.uwagiZlecenia, iloscNaZleceniu: o.iloscNaZleceniu, labelBrought: !o.labelBrought
-    });
-    if (!updated) alert('Не вдалося зберегти статус на сервері.');
-    await syncTrackerFromServer();
-    return !!updated;
-  };
-  window.__trDelete = async function (id) {
-    const ok = await deleteTrackerRow(id);
-    if (!ok) alert('Не вдалося видалити на сервері.');
-    await syncTrackerFromServer();
-    return ok;
-  };
- 
-  function saveApiKeys(){ localStorage.setItem(LS_APIKEYS, JSON.stringify(state.apiKeys)); }
-  function saveActiveKey(){ localStorage.setItem(LS_ACTIVE_KEY, String(state.activeKeyIndex)); }
-  function getActiveApiKey(){ const k = state.apiKeys[state.activeKeyIndex]; return k ? k.trim() : ""; }
- 
-  // ---------- Supabase: спільна таблиця, окремі "kind" ----------
-  async function fetchTrackerRows(){
-    const { data, error } = await sb.from(TABLE).select('id, data').order('id', { ascending: true });
-    if (error) { console.error('Ошибка загрузки трекера из Supabase', error); return null; }
-    return data;
-  }
-  async function insertTrackerRow(kind, payload){
-    const { data, error } = await sb.from(TABLE).insert({ data: Object.assign({ kind }, payload) }).select('id, data').single();
-    if (error) { console.error('Ошибка добавления в Supabase', error); return null; }
-    return data;
-  }
-  async function updateTrackerRow(id, kind, payload){
-    const { data, error } = await sb.from(TABLE).update({ data: Object.assign({ kind }, payload) }).eq('id', id).select('id, data').single();
-    if (error) { console.error('Ошибка обновления в Supabase', error); return null; }
-    return data;
-  }
-  async function deleteTrackerRow(id){
-    const { error } = await sb.from(TABLE).delete().eq('id', id);
-    if (error) { console.error('Ошибка удаления в Supabase', error); return false; }
-    return true;
-  }
- 
-  async function syncTrackerFromServer(){
-    const rows = await fetchTrackerRows();
-    if (rows === null) return;
- 
-    const orderRows = rows.filter(r => r.data && r.data.kind === 'order');
-    const newOrderRows = rows.filter(r => r.data && r.data.kind === 'new_order');
-    const labelRows = rows.filter(r => r.data && r.data.kind === 'label');
-    const listRows = rows.filter(r => r.data && r.data.kind === 'tracker_machine_list');
- 
-    state.orders = orderRows.map(r => ({
-      id: r.id,
-      date: r.data.date || "",
-      machine: r.data.machine || null,
-      numerZlecenia: r.data.numerZlecenia || "",
-      nrKatalogowy: r.data.nrKatalogowy || "",
-      nazwaProduktu: r.data.nazwaProduktu || "",
-      labelCode: r.data.labelCode || "",
-      uwagiZlecenia: r.data.uwagiZlecenia || "",
-      iloscNaZleceniu: r.data.iloscNaZleceniu || "",
-      labelBrought: !!r.data.labelBrought
-    }));
-    state.newOrders = newOrderRows.map(r => ({
-      id: r.id,
-      date: r.data.date || "",
-      machine: r.data.machine || null,
-      numerZlecenia: r.data.numerZlecenia || "",
-      createdAt: r.data.createdAt || 0
-    }));
-    state.labels = labelRows.map(r => ({
-      id: r.id, raw: r.data.raw, digits: r.data.digits, matchedMachines: [], brought: false
-    }));
- 
-    if (listRows.length > 0){
-      // Якщо випадково створилось кілька записів списку машин - беремо найперший, решту ігноруємо.
-      const canonical = listRows[0];
-      state.machineListRowId = canonical.id;
-      state.machines = Array.isArray(canonical.data.machines) ? canonical.data.machines : DEFAULT_MACHINES.slice();
-    } else {
-      const created = await insertTrackerRow('tracker_machine_list', { machines: DEFAULT_MACHINES.slice() });
-      if (created){ state.machineListRowId = created.id; state.machines = created.data.machines; }
-    }
- 
-    renderAll();
-  }
- 
-  async function persistMachineList(){
-    if (state.machineListRowId == null){
-      const created = await insertTrackerRow('tracker_machine_list', { machines: state.machines });
-      if (created) state.machineListRowId = created.id;
-      return !!created;
-    }
-    const updated = await updateTrackerRow(state.machineListRowId, 'tracker_machine_list', { machines: state.machines });
-    return !!updated;
-  }
- 
-  // ---------- SETTINGS: API KEYS (тільки локально, не синхронізується) ----------
-  const apiKeysWrap = document.getElementById("apiKeysWrap");
-  function renderApiKeys(){
-    apiKeysWrap.innerHTML = state.apiKeys.map((k,i) => `
-      <div class="apikey-row ${i===state.activeKeyIndex?'active-slot':''}">
-        <input type="radio" name="activeApiKey" value="${i}" ${i===state.activeKeyIndex?'checked':''} data-action="pick-key">
-        <span class="ak-label">Ключ ${i+1}</span>
-        <input type="text" placeholder="Gemini API ключ ${i+1}" value="${escapeAttr(k)}" data-action="edit-key" data-i="${i}">
-      </div>
-    `).join("");
-  }
-  apiKeysWrap.addEventListener("change", (e) => {
-    const radio = e.target.closest("[data-action=pick-key]");
-    if(radio){ state.activeKeyIndex = Number(radio.value); saveActiveKey(); renderApiKeys(); }
-  });
-  apiKeysWrap.addEventListener("input", (e) => {
-    const inp = e.target.closest("[data-action=edit-key]");
-    if(inp){ state.apiKeys[Number(inp.dataset.i)] = inp.value; saveApiKeys(); }
-  });
- 
-  function extractDigits(code){
-    if(!code) return null;
-    const m = String(code).match(/\d{6}/);
-    return m ? m[0] : null;
-  }
-  function fmtDate(iso){
-    if(!iso) return null;
-    const p = iso.split("-");
-    if(p.length!==3) return iso;
-    return `${p[2]}.${p[1]}.${p[0]}`;
-  }
-  function sortableDate(str){
-    // Приймає "дд.мм.рррр" (як повертає Gemini) і робить рядок, придатний для сортування.
-    const m = String(str||'').trim().match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
-    if(!m) return "9999-99-99";
-    return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
-  }
-  function guessMachine(code){
-    if(!code) return null;
-    const up = code.toUpperCase();
-    const exact = state.machines.find(m => m.toUpperCase() === up);
-    if(exact) return exact;
-    const starts = state.machines.filter(m => m.toUpperCase().startsWith(up));
-    if(starts.length === 1) return starts[0];
-    return null;
-  }
-  // Витягує з тексту типу "S-63 + IML" код на кшталт "S63" для пошуку в списку машин.
-  function extractMachineCode(str){
-    if(!str) return null;
-    const m = String(str).match(/([A-Za-z])\s*-?\s*(\d{2,4})/);
-    return m ? (m[1] + m[2]).toUpperCase() : null;
-  }
- 
-  function recompute(){
-    state.labels.forEach(l => { l.matchedMachines = []; l.brought = false; });
-    state.orders.forEach(o => {
-      const d = extractDigits(o.labelCode);
-      o.matched = false;
-      if(d){
-        state.labels.forEach(l => {
-          if(l.digits === d){
-            o.matched = true;
-            if(o.machine && !l.matchedMachines.includes(o.machine)) l.matchedMachines.push(o.machine);
-            if(o.labelBrought) l.brought = true;
-          }
-        });
-      }
-    });
-    // Нові зліценія: шукаємо код етикетки та статус "принесено" за збігом Numer zlecenia з вкладкою "Заявки".
-    state.newOrders.forEach(no => {
-      const num = (no.numerZlecenia || '').trim();
-      const match = num ? state.orders.find(o => (o.numerZlecenia || '').trim() === num) : null;
-      no.labelCode = match ? match.labelCode : "";
-      no.brought = match ? !!match.labelBrought : false;
-      no.ilosc = match ? (match.iloscNaZleceniu || "") : "";
-    });
-    // Заявки: "дата початку" береться з вкладки "Нові зліценія" (за Numer zlecenia); якщо збігу немає - власна дата заявки.
-    state.orders.forEach(o => {
-      const num = (o.numerZlecenia || '').trim();
-      const nm = num ? state.newOrders.find(no => (no.numerZlecenia || '').trim() === num && no.date) : null;
-      o.dateEff = nm ? nm.date : o.date;
-    });
-  }
- 
-  function parseLabelCodes(text){
-    const out = [];
-    const seenDigits = new Set();
-    const re = /([#GEge])\s*(\d{6})(?!\d)|\(\s*([#GEge])?\s*(\d{6})(?!\d)\s*\)/g;
-    let m;
-    while((m = re.exec(text)) !== null){
-      let prefix, digits;
-      if(m[2]){ prefix = m[1].toUpperCase(); digits = m[2]; }
-      else { prefix = m[3] ? m[3].toUpperCase() : ""; digits = m[4]; }
-      if(seenDigits.has(digits)) continue;
-      seenDigits.add(digits);
-      out.push({ raw: prefix + digits, digits });
-    }
-    return out;
-  }
- 
-  function fileToBase64(file){
-    return new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result.split(",")[1]);
-      r.onerror = () => reject(new Error("read failed"));
-      r.readAsDataURL(file);
-    });
-  }
-  function fileToDataURL(file){
-    return new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result);
-      r.onerror = () => reject(new Error("read failed"));
-      r.readAsDataURL(file);
-    });
-  }
-  function loadImageFromDataURL(dataURL){
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = dataURL;
-    });
-  }
-  function chunkArray(arr, size){
-    const out = [];
-    for(let i=0;i<arr.length;i+=size) out.push(arr.slice(i,i+size));
-    return out;
-  }
- 
-  async function ocrImage(file){
-    const apiKey = getActiveApiKey();
-    if(!apiKey) throw new Error(`Немає ключа для слоту ${state.activeKeyIndex+1}. Додайте його в Налаштуваннях або оберіть інший активний ключ.`);
-    const base64 = await fileToBase64(file);
-    const mediaType = file.type || "image/jpeg";
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify({
-        contents: [{
-          role: "user",
-          parts: [
-            { text: "Transcribe ALL text visible in this image exactly as shown, preserving the original line breaks and order. Keep Polish, Ukrainian and Russian text as-is, do not translate. Do not add commentary, headers, quotes or explanation. Output ONLY the raw transcribed text." },
-            { inline_data: { mime_type: mediaType, data: base64 } }
-          ]
-        }]
-      })
-    });
-    const data = await resp.json();
-    if(data.error){
-      const msg = data.error.message || "Gemini API error";
-      throw new Error(`Слот ${state.activeKeyIndex+1}: ${msg}`);
-    }
-    const parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
-    return parts.map(p => p.text || "").join("\n");
-  }
- 
-  // ---------- Розпізнавання заявок з фото: колаж/PDF -> структурований JSON ----------
-  const ORDER_FIELD_SCHEMA = [
-    'numer_zlecenia','pracownik_kod','pracownik_nazwisko','data_rozpoczecia',
-    'maszyna_forma','nr_katalogowy','nazwa_produktu','klient',
-    'uwagi_zamowienia','uwagi_zlecenia','ilosc_na_zleceniu','opis_operacji',
-    'szt_na_palecie','rodzaj_palety','wysokosc_palety','szt_w_kartonie'
-  ];
- 
-  const ORDER_PROMPT = `Це скріншоти екранів виробничої/складської ERP-системи (HermesSQL), таблиці та картки "Zlecone operacje" (замовлені операції), польською мовою. На зображенні може бути кілька рядків списку та/або одна чи кілька детальних карток одного замовлення.
- 
-Твоє завдання: знайти КОЖНЕ окреме замовлення (унікальний "Numer zlecenia") і повернути по ньому один об'єкт JSON з такими полями (рядки, якщо поля немає або воно порожнє/"-" — став порожній рядок ""):
- 
-- numer_zlecenia — номер замовлення (напр. ZPR/P /2026/005945)
-- pracownik_kod — код працівника (Pracownik, напр. P00185)
-- pracownik_nazwisko — ім'я/прізвище працівника
-- data_rozpoczecia — планована дата початку (Planowana data rozpoczęcia), у форматі дд.мм.рррр
-- maszyna_forma — машина + форма разом (напр. "S-63 + IML, forma 393")
-- nr_katalogowy — Numer katalogowy (повний, з детальної картки, якщо є)
-- nazwa_produktu — Nazwa (повна назва товару)
-- klient — Klient
-- uwagi_zamowienia — Uwagi do zamówienia
-- uwagi_zlecenia — Uwagi do zlecenia
-- ilosc_na_zleceniu — Ilość na zleceniu
-- opis_operacji — Opis operacji
-- szt_na_palecie — SZT na palecie
-- rodzaj_palety — Rodzaj palety
-- wysokosc_palety — Wysokość palety
-- szt_w_kartonie — SZT w kartonie
- 
-Якщо те саме замовлення зустрічається і в рядку списку, і в детальній картці — об'єднай в ОДИН запис, беручи найповніші/найточніші значення (детальна картка зазвичай точніша за rozpoczecia/nr katalogowy/nazwa). Не дублюй замовлення.
- 
-Зберігай текст так, як він написаний на екрані (з польськими діакритичними знаками), нічого не перекладай і не вигадуй.
- 
-Поверни ЛИШЕ валідний JSON-масив об'єктів з переліченими вище ключами. Без markdown, без пояснень, без коду в трьох апострофах.`;
- 
-  async function buildCollage(files){
-    const dataURLs = await Promise.all(files.map(fileToDataURL));
-    const imgs = await Promise.all(dataURLs.map(loadImageFromDataURL));
-    const n = imgs.length;
-    const cols = n <= 1 ? 1 : (n <= 4 ? 2 : (n <= 9 ? 3 : (n <= 16 ? 4 : 5)));
-    const rows = Math.ceil(n/cols);
-    const cellW = 1000;
-    const gap = 14;
-    const scaledHeights = imgs.map(img => cellW * (img.height/img.width));
-    const cellH = Math.max(...scaledHeights, 700);
- 
-    const canvas = document.createElement('canvas');
-    canvas.width = cols*cellW + (cols+1)*gap;
-    canvas.height = rows*cellH + (rows+1)*gap;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
- 
-    imgs.forEach((img,i)=>{
-      const col = i % cols;
-      const row = Math.floor(i/cols);
-      const x = gap + col*(cellW+gap);
-      const y = gap + row*(cellH+gap);
-      const scale = Math.min(cellW/img.width, cellH/img.height);
-      const w = img.width*scale;
-      const h = img.height*scale;
-      const dx = x + (cellW-w)/2;
-      const dy = y + (cellH-h)/2;
-      ctx.strokeStyle = '#cccccc';
-      ctx.strokeRect(x,y,cellW,cellH);
-      ctx.drawImage(img, dx, dy, w, h);
-    });
- 
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
-    return { base64: dataUrl.split(',')[1], mime: 'image/jpeg' };
-  }
- 
-  async function buildPDF(files){
-    const { jsPDF } = window.jspdf;
-    const dataURLs = await Promise.all(files.map(fileToDataURL));
-    const imgs = await Promise.all(dataURLs.map(loadImageFromDataURL));
-    let doc;
-    imgs.forEach((img, i)=>{
-      const orientation = img.width > img.height ? 'l' : 'p';
-      const fmt = [img.width, img.height];
-      if(i===0){
-        doc = new jsPDF({ orientation, unit:'px', format: fmt, compress:true });
-      } else {
-        doc.addPage(fmt, orientation);
-      }
-      doc.addImage(dataURLs[i], 'JPEG', 0, 0, img.width, img.height);
-    });
-    const dataUri = doc.output('datauristring');
-    return { base64: dataUri.split(',')[1], mime: 'application/pdf' };
-  }
- 
-  async function callGeminiStructured(base64, mime){
-    const apiKey = getActiveApiKey();
-    if(!apiKey) throw new Error(`Немає ключа для слоту ${state.activeKeyIndex+1}. Додайте його в Налаштуваннях або оберіть інший активний ключ.`);
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify({
-        contents: [{
-          role: "user",
-          parts: [
-            { text: ORDER_PROMPT },
-            { inline_data: { mime_type: mime, data: base64 } }
-          ]
-        }],
-        generationConfig: { temperature: 0, response_mime_type: 'application/json' }
-      })
-    });
-    const data = await resp.json();
-    if(data.error){
-      throw new Error(`Слот ${state.activeKeyIndex+1}: ${data.error.message || 'Gemini API error'}`);
-    }
-    const parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
-    const text = parts.map(p => p.text || "").join("");
-    const cleaned = text.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
-    let parsed;
-    try{ parsed = JSON.parse(cleaned); }
-    catch(e){ throw new Error('Не вдалося розпізнати відповідь AI як JSON. Спробуйте зменшити кількість фото в одному запиті.'); }
-    if(!Array.isArray(parsed)) parsed = [parsed];
-    return parsed;
-  }
- 
-  // Номер етикетки в "Uwagi do zamówienia" - завжди 6-значний код (інколи з префіксом E/G/# або без нього).
-  function labelDigitsOf(rec){ return extractDigits(rec && rec.uwagi_zamowienia); }
- 
-  function mergeOrderRecord(base, incoming){
-    const merged = Object.assign({}, base);
-    ORDER_FIELD_SCHEMA.forEach(k=>{
-      const a = (base[k]||'').toString().trim();
-      const b = (incoming[k]||'').toString().trim();
-      if(!a && b) merged[k] = b;
-      else if(a && b && b.length > a.length) merged[k] = b;
-      else merged[k] = a || b || '';
-    });
-    return merged;
-  }
- 
-  const ordersList = document.getElementById("ordersList");
-  function renderOrders(){
-    // Спочатку заявки, для яких вже знайдено співпадіння етикетки,
-    // потім ті, що ще чекають; в межах групи - за датою початку.
-    const arr = state.orders.slice().sort((a,b) => {
-      if (!!a.labelBrought !== !!b.labelBrought) return a.labelBrought ? 1 : -1;
-      if (a.matched !== b.matched) return a.matched ? -1 : 1;
-      return sortableDate(a.dateEff).localeCompare(sortableDate(b.dateEff));
-    });
-    if(arr.length === 0){
-      ordersList.innerHTML = `<div class="empty">Немає заявок.<br>Натисніть «Додати фото заявок», щоб розпізнати їх з фото екрана.</div>`;
-      return;
-    }
-    ordersList.innerHTML = arr.map(o => {
-      const missing = !o.machine || !o.numerZlecenia;
-      const cls = o.matched ? "matched" : (missing ? "warn" : "");
-      const code = extractDigits(o.labelCode) ? o.labelCode.trim() : (o.labelCode ? o.labelCode : 'код?');
-      const mainLine = `${o.machine || 'машина?'}  ${code}`;
-      const badge = o.matched
-        ? `<div class="oc-match">✓ Етикетка знайдена</div>`
-        : `<div class="oc-waiting">⏳ Очікує етикетку</div>`;
-      return `
-        <div class="order-card ${cls}" data-id="${o.id}" data-kind="order">
-          <div class="oc-no">${escapeHtml(o.numerZlecenia || 'без номера')}</div>
-          <div class="oc-main">${escapeHtml(mainLine)}</div>
-          <div class="oc-date">${escapeHtml(o.dateEff || 'дата?')}</div>
-          ${badge}
-          <div class="oc-brought-row">
-            <span class="oc-brought-label">Етикетку принесено</span>
-            <div class="oc-brought-switch ${o.labelBrought ? 'on' : ''}" data-action="toggle-brought" data-id="${o.id}"></div>
-          </div>
-        </div>`;
-    }).join("");
-  }
- 
-  const newOrdersList = document.getElementById("newOrdersList");
-  function renderNewOrders(){
-    const arr = state.newOrders.slice().sort((a,b) => {
-      if (!!a.brought !== !!b.brought) return a.brought ? 1 : -1;
-      const aMissing = !extractDigits(a.labelCode);
-      const bMissing = !extractDigits(b.labelCode);
-      if (aMissing !== bMissing) return aMissing ? -1 : 1;
-      return sortableDate(a.date).localeCompare(sortableDate(b.date));
-    });
-    if(arr.length === 0){
-      newOrdersList.innerHTML = `<div class="empty">Немає нових зліценій.<br>Натисніть «Додати фото зліценій», щоб розпізнати їх з фото екрана.</div>`;
-      return;
-    }
-    newOrdersList.innerHTML = arr.map(no => {
-      const hasLabel = extractDigits(no.labelCode);
-      const isFresh = no.createdAt && (Date.now() - no.createdAt) < (10 * 60 * 1000);
-      const colorCls = isFresh ? 'fresh-card' : (hasLabel ? '' : 'missing-label');
-      const labelLine = hasLabel
-        ? `<div class="oc-label">${escapeHtml(no.labelCode.trim())}</div>`
-        : `<div class="oc-label oc-label-missing">код етикетки невідомий</div>`;
-      return `
-        <div class="order-card new-zlecenie ${colorCls}" data-id="${no.id}" data-kind="neworder">
-          <div class="oc-no">${escapeHtml(no.numerZlecenia || 'без номера')}</div>
-          <div class="oc-main">${escapeHtml(no.machine || 'машина?')}</div>
-          <div class="oc-date">${escapeHtml(no.date || 'дата?')}</div>
-          ${no.ilosc ? `<div class="oc-ilosc">Ilość: ${escapeHtml(no.ilosc)}</div>` : ''}
-          ${labelLine}
-          <div class="brought-wrap"><div class="brought-dot ${no.brought ? 'on':''}"></div><span>${no.brought ? 'Принесено' : 'Не принесено'}</span></div>
-        </div>`;
-    }).join("");
-  }
+    </script>
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        .backdrop-blur-ios {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        /* iOS Safe Area Padding Support */
+        .pt-safe { padding-top: env(safe-area-inset-top, 12px); }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 12px); }
+    </style>
+</head>
+<body class="bg-black text-slate-100 flex flex-col h-full w-full">
 
-  const labelsList = document.getElementById("labelsList");
-  function renderLabels(){
-    const arr = state.labels.slice().sort((a,b) => {
-      if (!!a.brought !== !!b.brought) return a.brought ? 1 : -1;
-      return a.digits.localeCompare(b.digits);
-    });
-    if(arr.length === 0){
-      labelsList.innerHTML = `<div class="empty">Список етикеток порожній.<br>Натисніть «Додати етикетки».</div>`;
-      return;
-    }
-    labelsList.innerHTML = arr.map(l => {
-      const matched = l.matchedMachines && l.matchedMachines.length > 0;
-      return `
-        <div class="row label-row ${matched ? 'matched':''}" data-id="${l.id}" data-kind="label">
-          <div class="led"></div>
-          <div class="row-main">
-            <div class="code-main">${l.raw}</div>
-            ${matched ? `<div class="label-matches">${l.matchedMachines.map(m=>`<span class="machine-badge">${m}</span>`).join("")}</div>` : ''}
-            <div class="brought-wrap"><div class="brought-dot ${l.brought ? 'on':''}"></div><span>${l.brought ? 'Принесено' : 'Не принесено'}</span></div>
-          </div>
-          <div class="row-actions">
-            <button class="icon-btn" data-action="delete-label" data-id="${l.id}">✕</button>
-          </div>
-        </div>`;
-    }).join("");
-  }
- 
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-  function escapeAttr(s){ return String(s||"").replace(/"/g,"&quot;"); }
- 
-  function renderAll(){ recompute(); renderOrders(); renderNewOrders(); renderLabels(); renderMachines(); renderApiKeys(); }
- 
-  const machinesListEl = document.getElementById("machinesList");
-  function renderMachines(){
-    document.getElementById("machineCount").textContent = state.machines.length;
-    machinesListEl.innerHTML = state.machines.map(m => `
-      <span class="machine-chip">${m}<button data-action="rm-machine" data-m="${m}">✕</button></span>
-    `).join("");
-  }
-  document.getElementById("btnAddMachine").addEventListener("click", async () => {
-    const inp = document.getElementById("newMachineInput");
-    const v = inp.value.trim().toUpperCase();
-    if(!v) return;
-    if(!state.machines.includes(v)) state.machines.push(v);
-    inp.value = "";
-    renderMachines();
-    const ok = await persistMachineList();
-    if(!ok) alert('Не вдалося зберегти список машин на сервері.');
-    syncTrackerFromServer();
-  });
-  document.getElementById("btnResetMachines").addEventListener("click", async () => {
-    if(!confirm("Скинути список машин до типового переліку?")) return;
-    state.machines = DEFAULT_MACHINES.slice();
-    renderMachines();
-    const ok = await persistMachineList();
-    if(!ok) alert('Не вдалося зберегти список машин на сервері.');
-    syncTrackerFromServer();
-  });
-  machinesListEl.addEventListener("click", async (e) => {
-    const btn = e.target.closest("[data-action=rm-machine]");
-    if(!btn) return;
-    state.machines = state.machines.filter(m => m !== btn.dataset.m);
-    renderMachines();
-    const ok = await persistMachineList();
-    if(!ok) alert('Не вдалося зберегти список машин на сервері.');
-    syncTrackerFromServer();
-  });
- 
-  const overlayOrderDetail = document.getElementById("overlayOrderDetail");
-  let editingOrderId = null;
- 
-  function fillMachineSelect(selectEl, currentVal){
-    selectEl.innerHTML = `<option value="">— вибрати —</option>` + state.machines.map(m => `<option value="${m}" ${m===currentVal?'selected':''}>${m}</option>`).join("");
-  }
- 
-  function openOrderDetail(id){
-    const o = state.orders.find(x => String(x.id) === String(id));
-    if(!o) return;
-    editingOrderId = o.id;
-    document.getElementById("odSub").textContent = o.matched ? " · знайдено на буфері" : " · очікує етикетки";
-    document.getElementById("odDate").value = o.dateEff || o.date || "";
-    fillMachineSelect(document.getElementById("odMachine"), o.machine);
-    document.getElementById("odNumer").value = o.numerZlecenia || "";
-    document.getElementById("odKatalogowy").value = o.nrKatalogowy || "";
-    document.getElementById("odNazwa").value = o.nazwaProduktu || "";
-    document.getElementById("odLabel").value = o.labelCode || "";
-    document.getElementById("odUwagiZlecenia").value = o.uwagiZlecenia || "";
-    document.getElementById("odIlosc").value = o.iloscNaZleceniu || "";
-    overlayOrderDetail.classList.add("open");
-  }
-  document.getElementById("odCancel").addEventListener("click", () => overlayOrderDetail.classList.remove("open"));
-  document.getElementById("odSave").addEventListener("click", async () => {
-    const existing = state.orders.find(x => String(x.id) === String(editingOrderId));
-    const payload = {
-      date: document.getElementById("odDate").value.trim(),
-      machine: document.getElementById("odMachine").value || null,
-      numerZlecenia: document.getElementById("odNumer").value.trim(),
-      nrKatalogowy: document.getElementById("odKatalogowy").value.trim(),
-      nazwaProduktu: document.getElementById("odNazwa").value.trim(),
-      labelCode: document.getElementById("odLabel").value.trim(),
-      uwagiZlecenia: document.getElementById("odUwagiZlecenia").value.trim(),
-      iloscNaZleceniu: document.getElementById("odIlosc").value.trim(),
-      labelBrought: existing ? !!existing.labelBrought : false
-    };
-    overlayOrderDetail.classList.remove("open");
-    const updated = await updateTrackerRow(editingOrderId, 'order', payload);
-    if(!updated) alert('Не вдалося зберегти заявку на сервері.');
-    syncTrackerFromServer();
-  });
-  document.getElementById("odDelete").addEventListener("click", async () => {
-    if(!confirm("Видалити цю заявку?")) return;
-    overlayOrderDetail.classList.remove("open");
-    const ok = await deleteTrackerRow(editingOrderId);
-    if(!ok) alert('Не вдалося видалити заявку на сервері.');
-    syncTrackerFromServer();
-  });
- 
-  ordersList.addEventListener("click", async (e) => {
-    const toggle = e.target.closest("[data-action=toggle-brought]");
-    if(toggle){
-      e.stopPropagation();
-      const o = state.orders.find(x => String(x.id) === String(toggle.dataset.id));
-      if(!o) return;
-      const newVal = !o.labelBrought;
-      toggle.classList.toggle("on", newVal);
-      const updated = await updateTrackerRow(o.id, 'order', {
-        date: o.date, machine: o.machine, numerZlecenia: o.numerZlecenia,
-        nrKatalogowy: o.nrKatalogowy, nazwaProduktu: o.nazwaProduktu, labelCode: o.labelCode,
-        uwagiZlecenia: o.uwagiZlecenia, iloscNaZleceniu: o.iloscNaZleceniu, labelBrought: newVal
-      });
-      if(!updated){ toggle.classList.toggle("on", !newVal); alert('Не вдалося зберегти статус на сервері.'); return; }
-      syncTrackerFromServer();
-      return;
-    }
-    const card = e.target.closest(".order-card[data-kind=order]");
-    if(card) openOrderDetail(card.dataset.id);
-  });
- 
-  newOrdersList.addEventListener("click", async (e) => {
-    const card = e.target.closest(".order-card[data-kind=neworder]");
-    if(!card) return;
-    if(confirm("Видалити це зліценіє?")){
-      const ok = await deleteTrackerRow(card.dataset.id);
-      if(!ok) alert('Не вдалося видалити зліценіє на сервері.');
-      syncTrackerFromServer();
-    }
-  });
-
-  document.getElementById("btnClearNewOrders").addEventListener("click", async () => {
-    if(state.newOrders.length===0) return;
-    if(!confirm("Очистити весь список нових зліценій?")) return;
-    await Promise.all(state.newOrders.map(no => deleteTrackerRow(no.id)));
-    syncTrackerFromServer();
-  });
-
-  labelsList.addEventListener("click", async (e) => {
-    const delBtn = e.target.closest("[data-action=delete-label]");
-    if(delBtn){
-      if(confirm("Видалити цей код етикетки?")){
-        const ok = await deleteTrackerRow(delBtn.dataset.id);
-        if(!ok) alert('Не вдалося видалити етикетку на сервері.');
-        syncTrackerFromServer();
-      }
-      return;
-    }
-  });
- 
-  document.getElementById("btnPrintOrders").addEventListener("click", () => {
-    if(state.orders.length === 0){ alert('Немає заявок для друку.'); return; }
-
-    // Той самий порядок, що й на екрані: знайдені (matched) заявки першими.
-    const arr = state.orders.slice().sort((a,b) => {
-      if (!!a.labelBrought !== !!b.labelBrought) return a.labelBrought ? 1 : -1;
-      if (a.matched !== b.matched) return a.matched ? -1 : 1;
-      return sortableDate(a.dateEff).localeCompare(sortableDate(b.dateEff));
-    });
-
-    // Текст малюємо на canvas і вставляємо як зображення в PDF, бо вбудовані
-    // шрифти jsPDF (helvetica/times/courier) не містять кириличних гліфів.
-    const pxPerMm = 3.7795275591; // ~96dpi
-    const pageWmm = 210, pageHmm = 297;
-    const pageWpx = Math.round(pageWmm * pxPerMm);
-    const pageHpx = Math.round(pageHmm * pxPerMm);
-    const marginPx = Math.round(16 * pxPerMm);
-    const lineH = 24;
-    const blockGap = 16;
-    const fontMain = "700 17px -apple-system, Arial, sans-serif";
-    const fontSub = "400 15px -apple-system, Arial, sans-serif";
-
-    const pages = [];
-    let canvas, ctx, y;
-
-    function startNewPage(){
-      canvas = document.createElement('canvas');
-      canvas.width = pageWpx;
-      canvas.height = pageHpx;
-      ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, pageWpx, pageHpx);
-      ctx.fillStyle = '#000000';
-      pages.push(canvas);
-      return marginPx;
-    }
-
-    y = startNewPage();
-
-    arr.forEach((o) => {
-      if (y + lineH * 3 + blockGap > pageHpx - marginPx) {
-        y = startNewPage();
-      }
-      const numer = o.numerZlecenia || 'без номера';
-      const dateLine = `ДАТА ПОЧАТКУ: ${o.dateEff || '-'}`;
-      const code = extractDigits(o.labelCode) ? o.labelCode.trim() : (o.labelCode || '-');
-      const machineLine = `${o.machine || 'машина?'} ${code}`;
-
-      ctx.font = fontMain;
-      ctx.fillText(numer, marginPx, y);
-      y += lineH;
-      ctx.font = fontSub;
-      ctx.fillText(dateLine, marginPx, y);
-      y += lineH;
-      ctx.fillText(machineLine, marginPx, y);
-      y += lineH + blockGap;
-    });
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-    pages.forEach((pg, i) => {
-      if (i > 0) doc.addPage();
-      doc.addImage(pg.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pageWmm, pageHmm);
-    });
-    const stamp = new Date().toISOString().slice(0,10);
-    doc.save(`zayavky_${stamp}.pdf`);
-  });
-
-  document.getElementById("btnClearOrders").addEventListener("click", async () => {
-    if(state.orders.length===0) return;
-    if(!confirm("Очистити весь список заявок?")) return;
-    await Promise.all(state.orders.map(o => deleteTrackerRow(o.id)));
-    syncTrackerFromServer();
-  });
-  document.getElementById("btnClearLabels").addEventListener("click", async () => {
-    if(state.labels.length===0) return;
-    if(!confirm("Очистити весь список етикеток?")) return;
-    await Promise.all(state.labels.map(l => deleteTrackerRow(l.id)));
-    syncTrackerFromServer();
-  });
- 
-  const overlayAddOrder = document.getElementById("overlayAddOrder");
-  const aoThumbs = document.getElementById("aoThumbs");
-  const aoStatus = document.getElementById("aoStatus");
-  let aoFiles = [];
-  let aoReviewData = [];
- 
-  function updateAoModeToggleUI(){
-    document.querySelectorAll("#aoModeToggle button").forEach(b=>{
-      b.classList.toggle("active", b.dataset.v === state.batchMode);
-    });
-  }
-  document.querySelectorAll("#aoModeToggle button").forEach(btn=>{
-    btn.addEventListener("click", () => {
-      state.batchMode = btn.dataset.v;
-      localStorage.setItem(LS_BATCH_MODE, state.batchMode);
-      updateAoModeToggleUI();
-    });
-  });
-  document.getElementById("aoBatchSize").addEventListener("change", (e) => {
-    let v = parseInt(e.target.value, 10);
-    if(isNaN(v)) v = 4;
-    v = Math.max(1, Math.min(20, v));
-    state.batchSize = v;
-    e.target.value = v;
-    localStorage.setItem(LS_BATCH_SIZE, String(v));
-  });
- 
-  function resetAddOrderModal(){
-    aoFiles = [];
-    aoThumbs.innerHTML = "";
-    aoThumbs.style.display = "flex";
-    aoStatus.textContent = "";
-    aoStatus.className = "status-line";
-    document.getElementById("aoReviewWrap").style.display = "none";
-    document.querySelector("#overlayAddOrder .modal-actions").style.display = "flex";
-    document.querySelector("#overlayAddOrder .method-grid").style.display = "flex";
-    document.querySelectorAll("#overlayAddOrder .opt-row").forEach(el => el.style.display = "flex");
-    document.getElementById("aoBatchSize").value = state.batchSize;
-    updateAoModeToggleUI();
-  }
- 
-  document.getElementById("btnAddOrder").addEventListener("click", () => {
-    resetAddOrderModal();
-    overlayAddOrder.classList.add("open");
-  });
-  document.getElementById("aoCancel").addEventListener("click", () => overlayAddOrder.classList.remove("open"));
- 
-  function addThumb(container, file, filesArr){
-    const url = URL.createObjectURL(file);
-    const div = document.createElement("div");
-    div.className = "thumb";
-    div.innerHTML = `<img src="${url}"><button class="rm">✕</button>`;
-    div.querySelector(".rm").addEventListener("click", () => {
-      const idx = filesArr.indexOf(file);
-      if(idx>-1) filesArr.splice(idx,1);
-      div.remove();
-    });
-    container.appendChild(div);
-  }
- 
-  document.getElementById("aoGallery").addEventListener("change", (e) => {
-    Array.from(e.target.files).forEach(f => { aoFiles.push(f); addThumb(aoThumbs, f, aoFiles); });
-    e.target.value = "";
-  });
-  document.getElementById("aoCamera").addEventListener("change", (e) => {
-    Array.from(e.target.files).forEach(f => { aoFiles.push(f); addThumb(aoThumbs, f, aoFiles); });
-    e.target.value = "";
-  });
- 
-  document.getElementById("aoRecognize").addEventListener("click", async () => {
-    if(aoFiles.length === 0){
-      aoStatus.textContent = "Додайте хоча б одне фото.";
-      aoStatus.className = "status-line err";
-      return;
-    }
-    const btn = document.getElementById("aoRecognize");
-    btn.disabled = true;
-    aoStatus.textContent = "Розпізнавання...";
-    aoStatus.className = "status-line";
- 
-    const batches = chunkArray(aoFiles, state.batchSize);
-    let rawResults = [];
-    let skipped = 0;
-    let failures = 0;
- 
-    for(let i=0;i<batches.length;i++){
-      aoStatus.textContent = `Обробка ${i+1} / ${batches.length}…`;
-      try{
-        const combined = state.batchMode === 'pdf' ? await buildPDF(batches[i]) : await buildCollage(batches[i]);
-        const records = await callGeminiStructured(combined.base64, combined.mime);
-        records.forEach(rec => {
-          const clean = {};
-          ORDER_FIELD_SCHEMA.forEach(k => clean[k] = (rec[k]!==undefined && rec[k]!==null) ? String(rec[k]).trim() : '');
-          if(!labelDigitsOf(clean)){ skipped++; return; }
-          const idx = rawResults.findIndex(r => r.numer_zlecenia && r.numer_zlecenia === clean.numer_zlecenia);
-          if(idx >= 0) rawResults[idx] = mergeOrderRecord(rawResults[idx], clean);
-          else rawResults.push(clean);
-        });
-      }catch(err){
-        failures++;
-        aoStatus.textContent = "Помилка: " + err.message;
-        aoStatus.className = "status-line err";
-      }
-    }
- 
-    btn.disabled = false;
- 
-    if(rawResults.length === 0){
-      if(failures === 0){
-        aoStatus.textContent = skipped > 0
-          ? `Не знайдено жодної заявки з розпізнаним номером етикетки (пропущено ${skipped}).`
-          : "Заявок не знайдено. Перевірте фото та спробуйте ще раз.";
-        aoStatus.className = "status-line err";
-      }
-      return;
-    }
- 
-    aoStatus.textContent = `Знайдено заявок: ${rawResults.length}` + (skipped > 0 ? ` (пропущено ${skipped} без номера етикетки)` : '');
-    aoStatus.className = "status-line ok";
- 
-    aoReviewData = rawResults.map(rec => {
-      let machine = guessMachine(extractMachineCode(rec.maszyna_forma));
-      if(!machine && rec.numer_zlecenia){
-        // Машину не розпізнано з фото заявки - шукаємо збіг за Numer zlecenia у вкладці "Нові зліценія".
-        const num = rec.numer_zlecenia.trim();
-        const match = state.newOrders.find(no => (no.numerZlecenia || '').trim() === num && no.machine);
-        if(match) machine = match.machine;
-      }
-      return {
-        date: rec.data_rozpoczecia || "",
-        machine: machine,
-        numerZlecenia: rec.numer_zlecenia || "",
-        nrKatalogowy: rec.nr_katalogowy || "",
-        nazwaProduktu: rec.nazwa_produktu || "",
-        labelCode: rec.uwagi_zamowienia || "",
-        uwagiZlecenia: rec.uwagi_zlecenia || "",
-        iloscNaZleceniu: rec.ilosc_na_zleceniu || ""
-      };
-    });
-    renderAoReview();
-  });
- 
-  function renderAoReview(){
-    document.getElementById("aoReviewWrap").style.display = "block";
-    document.querySelector("#overlayAddOrder .modal-actions").style.display = "none";
-    document.querySelector("#overlayAddOrder .method-grid").style.display = "none";
-    document.querySelectorAll("#overlayAddOrder .opt-row").forEach(el => el.style.display = "none");
-    aoThumbs.style.display = "none";
- 
-    const wrap = document.getElementById("aoReviewList");
-    wrap.innerHTML = aoReviewData.map((o, i) => `
-      <div class="review-card" data-idx="${i}">
-        <div class="rc-head"><span>Заявка ${i+1}</span></div>
-        <div class="row2">
-          <div class="field"><label>Дата початку</label><input type="text" class="rc-date" value="${escapeAttr(o.date)}"></div>
-          <div class="field"><label>Машина</label><select class="rc-machine"></select></div>
+    <!-- App Header Bar -->
+    <header class="pt-safe bg-black/80 backdrop-blur-ios border-b border-white/10 px-4 pb-2 flex items-center justify-between shrink-0 z-40">
+        <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-wand-magic-sparkles text-iosBlue text-sm"></i>
+            <h1 class="font-semibold text-sm text-white tracking-tight truncate max-w-[180px]" id="headerTitle">Нова сесія</h1>
         </div>
-        <div class="field"><label>Numer zlecenia</label><input type="text" class="rc-numer" value="${escapeAttr(o.numerZlecenia)}"></div>
-        <div class="field"><label>Numer katalogowy</label><input type="text" class="rc-katalogowy" value="${escapeAttr(o.nrKatalogowy)}"></div>
-        <div class="field"><label>Nazwa</label><input type="text" class="rc-nazwa" value="${escapeAttr(o.nazwaProduktu)}"></div>
-        <div class="field"><label>Uwagi do zamówienia (код етикетки)</label><input type="text" class="rc-label" value="${escapeAttr(o.labelCode)}"></div>
-        <div class="field"><label>Uwagi do zlecenia</label><input type="text" class="rc-uwagizlec" value="${escapeAttr(o.uwagiZlecenia)}"></div>
-        <div class="field"><label>Ilość na zleceniu</label><input type="text" class="rc-ilosc" value="${escapeAttr(o.iloscNaZleceniu)}"></div>
-      </div>
-    `).join("");
-    wrap.querySelectorAll(".review-card").forEach((card, i) => {
-      fillMachineSelect(card.querySelector(".rc-machine"), aoReviewData[i].machine);
-    });
-  }
- 
-  document.getElementById("aoBack").addEventListener("click", () => resetAddOrderModal());
- 
-  document.getElementById("aoSaveAll").addEventListener("click", async () => {
-    const cards = document.querySelectorAll("#aoReviewList .review-card");
-    // Заявка з таким самим "Numer zlecenia" вже є в базі - не створюємо дубль.
-    const existingNumbers = new Set(
-      state.orders.map(o => (o.numerZlecenia || '').trim()).filter(Boolean)
-    );
-    const inserts = [];
-    let duplicates = 0;
-    cards.forEach((card) => {
-      const numer = card.querySelector(".rc-numer").value.trim();
-      if (numer && existingNumbers.has(numer)) { duplicates++; return; }
-      if (numer) existingNumbers.add(numer);
-      inserts.push(insertTrackerRow('order', {
-        date: card.querySelector(".rc-date").value.trim(),
-        machine: card.querySelector(".rc-machine").value || null,
-        numerZlecenia: numer,
-        nrKatalogowy: card.querySelector(".rc-katalogowy").value.trim(),
-        nazwaProduktu: card.querySelector(".rc-nazwa").value.trim(),
-        labelCode: card.querySelector(".rc-label").value.trim(),
-        uwagiZlecenia: card.querySelector(".rc-uwagizlec").value.trim(),
-        iloscNaZleceniu: card.querySelector(".rc-ilosc").value.trim()
-      }));
-    });
-    const results = await Promise.all(inserts);
-    overlayAddOrder.classList.remove("open");
-    if(results.some(r => !r)) alert('Частину заявок не вдалося зберегти на сервері.');
-    if(duplicates > 0) alert(`Пропущено як дублікати (за номером замовлення): ${duplicates}`);
-    syncTrackerFromServer();
-  });
- 
-  const overlayAddNewOrder = document.getElementById("overlayAddNewOrder");
-  const anoThumbs = document.getElementById("anoThumbs");
-  const anoStatus = document.getElementById("anoStatus");
-  const ANO_MAX_FILES = 10;
-  let anoFiles = [];
-  let anoReviewData = [];
-
-  function resetAddNewOrderModal(){
-    anoFiles = [];
-    anoThumbs.innerHTML = "";
-    anoThumbs.style.display = "flex";
-    anoStatus.textContent = "";
-    anoStatus.className = "status-line";
-    document.getElementById("anoReviewWrap").style.display = "none";
-    document.querySelector("#overlayAddNewOrder .modal-actions").style.display = "flex";
-    document.querySelector("#overlayAddNewOrder .method-grid").style.display = "flex";
-  }
-
-  document.getElementById("btnAddNewOrder").addEventListener("click", () => {
-    resetAddNewOrderModal();
-    overlayAddNewOrder.classList.add("open");
-  });
-  document.getElementById("anoCancel").addEventListener("click", () => overlayAddNewOrder.classList.remove("open"));
-
-  function addAnoFiles(fileList){
-    const incoming = Array.from(fileList);
-    const room = ANO_MAX_FILES - anoFiles.length;
-    if(room <= 0){
-      alert(`Максимум ${ANO_MAX_FILES} фото за раз.`);
-      return;
-    }
-    const toAdd = incoming.slice(0, room);
-    if(incoming.length > toAdd.length){
-      alert(`Максимум ${ANO_MAX_FILES} фото за раз. Додано перші ${toAdd.length}.`);
-    }
-    toAdd.forEach(f => { anoFiles.push(f); addThumb(anoThumbs, f, anoFiles); });
-  }
-
-  document.getElementById("anoGallery").addEventListener("change", (e) => {
-    addAnoFiles(e.target.files);
-    e.target.value = "";
-  });
-  document.getElementById("anoCamera").addEventListener("change", (e) => {
-    addAnoFiles(e.target.files);
-    e.target.value = "";
-  });
-
-  document.getElementById("anoRecognize").addEventListener("click", async () => {
-    if(anoFiles.length === 0){
-      anoStatus.textContent = "Додайте хоча б одне фото.";
-      anoStatus.className = "status-line err";
-      return;
-    }
-    const btn = document.getElementById("anoRecognize");
-    btn.disabled = true;
-    anoStatus.textContent = "Розпізнавання...";
-    anoStatus.className = "status-line";
-
-    let rawResults = [];
-    let skipped = 0;
-
-    try{
-      const combined = await buildCollage(anoFiles);
-      const records = await callGeminiStructured(combined.base64, combined.mime);
-      records.forEach(rec => {
-        const clean = {};
-        ORDER_FIELD_SCHEMA.forEach(k => clean[k] = (rec[k]!==undefined && rec[k]!==null) ? String(rec[k]).trim() : '');
-        if(!clean.numer_zlecenia){ skipped++; return; }
-        const idx = rawResults.findIndex(r => r.numer_zlecenia && r.numer_zlecenia === clean.numer_zlecenia);
-        if(idx >= 0) rawResults[idx] = mergeOrderRecord(rawResults[idx], clean);
-        else rawResults.push(clean);
-      });
-    }catch(err){
-      btn.disabled = false;
-      anoStatus.textContent = "Помилка: " + err.message;
-      anoStatus.className = "status-line err";
-      return;
-    }
-
-    btn.disabled = false;
-
-    if(rawResults.length === 0){
-      anoStatus.textContent = skipped > 0
-        ? `Не знайдено жодного зліценія з номером (пропущено ${skipped}).`
-        : "Зліценій не знайдено. Перевірте фото та спробуйте ще раз.";
-      anoStatus.className = "status-line err";
-      return;
-    }
-
-    anoStatus.textContent = `Знайдено зліценій: ${rawResults.length}` + (skipped > 0 ? ` (пропущено ${skipped} без номера)` : '');
-    anoStatus.className = "status-line ok";
-
-    anoReviewData = rawResults.map(rec => ({
-      date: rec.data_rozpoczecia || "",
-      machine: guessMachine(extractMachineCode(rec.maszyna_forma)),
-      numerZlecenia: rec.numer_zlecenia || ""
-    }));
-    renderAnoReview();
-  });
-
-  function renderAnoReview(){
-    document.getElementById("anoReviewWrap").style.display = "block";
-    document.querySelector("#overlayAddNewOrder .modal-actions").style.display = "none";
-    document.querySelector("#overlayAddNewOrder .method-grid").style.display = "none";
-    anoThumbs.style.display = "none";
-
-    const wrap = document.getElementById("anoReviewList");
-    wrap.innerHTML = anoReviewData.map((no, i) => `
-      <div class="review-card" data-idx="${i}">
-        <div class="rc-head"><span>Зліценіє ${i+1}</span></div>
-        <div class="row2">
-          <div class="field"><label>Дата початку</label><input type="text" class="rc-date" value="${escapeAttr(no.date)}"></div>
-          <div class="field"><label>Машина</label><select class="rc-machine"></select></div>
+        
+        <div class="flex items-center space-x-2">
+            <button onclick="createNewSession()" class="bg-iosBlue active:bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-medium transition flex items-center space-x-1">
+                <i class="fa-solid fa-plus text-[10px]"></i>
+                <span>Нова</span>
+            </button>
         </div>
-        <div class="field"><label>Numer zlecenia</label><input type="text" class="rc-numer" value="${escapeAttr(no.numerZlecenia)}"></div>
-      </div>
-    `).join("");
-    wrap.querySelectorAll(".review-card").forEach((card, i) => {
-      fillMachineSelect(card.querySelector(".rc-machine"), anoReviewData[i].machine);
-    });
-  }
+    </header>
 
-  document.getElementById("anoBack").addEventListener("click", () => resetAddNewOrderModal());
+    <!-- Dynamic Content Body -->
+    <main class="flex-1 relative overflow-hidden bg-black w-full">
+        
+        <!-- VIEW 1: GENERATOR (CHAT) -->
+        <div id="viewChat" class="absolute inset-0 flex flex-col z-10 w-full h-full">
+            <!-- Session Context Banner -->
+            <div class="bg-iosCardSecondary/80 border-b border-white/5 px-3 py-1.5 text-[11px] flex justify-between items-center text-slate-400 shrink-0">
+                <div class="flex items-center space-x-1.5 overflow-hidden mr-2">
+                    <i class="fa-solid fa-layer-group text-iosBlue shrink-0"></i>
+                    <span id="sessionStatusLabel" class="truncate">Проект не збережено</span>
+                </div>
+                <select id="modelSelect" class="bg-black/50 text-slate-200 border border-white/10 rounded px-1.5 py-0.5 font-mono text-[10px] outline-none shrink-0">
+                    <option value="gemini-3.8-flash" selected>gemini-3.8-flash</option>
+                    <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite</option>
+                    <option value="gemini-3.1-pro-preview">gemini-3.1-pro</option>
+                </select>
+            </div>
 
-  document.getElementById("anoSaveAll").addEventListener("click", async () => {
-    const cards = document.querySelectorAll("#anoReviewList .review-card");
-    // Зліценіе з таким самим "Numer zlecenia" вже є в цій вкладці - не створюємо дубль.
-    const existingNumbers = new Set(
-      state.newOrders.map(no => (no.numerZlecenia || '').trim()).filter(Boolean)
-    );
-    const inserts = [];
-    let duplicates = 0;
-    cards.forEach((card) => {
-      const numer = card.querySelector(".rc-numer").value.trim();
-      if (numer && existingNumbers.has(numer)) { duplicates++; return; }
-      if (numer) existingNumbers.add(numer);
-      inserts.push(insertTrackerRow('new_order', {
-        date: card.querySelector(".rc-date").value.trim(),
-        machine: card.querySelector(".rc-machine").value || null,
-        numerZlecenia: numer,
-        createdAt: Date.now()
-      }));
-    });
-    const results = await Promise.all(inserts);
-    overlayAddNewOrder.classList.remove("open");
-    if(results.some(r => !r)) alert('Частину зліценій не вдалося зберегти на сервері.');
-    if(duplicates > 0) alert(`Пропущено як дублікати (за номером зліценія): ${duplicates}`);
-    syncTrackerFromServer();
-  });
+            <!-- Chat History Window -->
+            <div id="chatMessages" class="flex-1 overflow-y-auto p-3 space-y-3 w-full">
+                <div class="bg-iosCard border border-white/5 rounded-2xl p-3 text-xs text-slate-300 space-y-2">
+                    <div class="font-semibold text-iosBlue flex items-center space-x-1.5">
+                        <i class="fa-solid fa-robot"></i>
+                        <span>ШІ Контекст-Асистент</span>
+                    </div>
+                    <p class="text-slate-400 text-[11px]">Опишіть додаток. Усі наступні підказки в цій сесії будуть <b>вносити зміни в той самий код</b>, доки ви не натиснете «Нова».</p>
+                    <div class="flex flex-wrap gap-1.5 pt-1">
+                        <button onclick="setTemplate('Створи Калькулятор грошей з збереженням у LocalStorage')" class="bg-iosCardSecondary active:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-full text-[11px]">📊 Калькулятор</button>
+                        <button onclick="setTemplate('Створи гру Змейка з кнопками керування для смартфона')" class="bg-iosCardSecondary active:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-full text-[11px]">🎮 Змейка</button>
+                    </div>
+                </div>
+            </div>
 
-  const overlayAddLabels = document.getElementById("overlayAddLabels");
-  const alThumbs = document.getElementById("alThumbs");
-  const alStatus = document.getElementById("alStatus");
-  let alFiles = [];
-  let alReviewData = [];
- 
-  function resetAddLabelsModal(){
-    document.getElementById("alText").value = "";
-    alFiles = [];
-    alThumbs.innerHTML = "";
-    alThumbs.style.display = "flex";
-    alStatus.textContent = "";
-    alStatus.className = "status-line";
-    document.getElementById("alReviewWrap").style.display = "none";
-    document.querySelector("#overlayAddLabels .modal-actions").style.display = "flex";
-    document.getElementById("alText").parentElement.style.display = "block";
-    document.querySelector("#overlayAddLabels .divider").style.display = "flex";
-    document.querySelector("#overlayAddLabels .method-grid").style.display = "flex";
-  }
- 
-  document.getElementById("btnAddLabels").addEventListener("click", () => {
-    resetAddLabelsModal();
-    overlayAddLabels.classList.add("open");
-  });
-  document.getElementById("alCancel").addEventListener("click", () => overlayAddLabels.classList.remove("open"));
- 
-  document.getElementById("alGallery").addEventListener("change", (e) => {
-    Array.from(e.target.files).forEach(f => { alFiles.push(f); addThumb(alThumbs, f, alFiles); });
-    e.target.value = "";
-  });
-  document.getElementById("alCamera").addEventListener("change", (e) => {
-    Array.from(e.target.files).forEach(f => { alFiles.push(f); addThumb(alThumbs, f, alFiles); });
-    e.target.value = "";
-  });
- 
-  document.getElementById("alRecognize").addEventListener("click", async () => {
-    const manualText = document.getElementById("alText").value.trim();
-    if(!manualText && alFiles.length===0){
-      alStatus.textContent = "Додайте текст або хоча б одне фото.";
-      alStatus.className = "status-line err";
-      return;
-    }
-    alStatus.textContent = "Розпізнавання...";
-    alStatus.className = "status-line";
-    let combined = manualText ? manualText + "\n" : "";
-    try{
-      for(const f of alFiles){ combined += "\n" + await ocrImage(f); }
-    }catch(err){
-      alStatus.textContent = "Помилка розпізнавання: " + err.message;
-      alStatus.className = "status-line err";
-      return;
-    }
-    const parsed = parseLabelCodes(combined);
-    if(parsed.length===0){
-      alStatus.textContent = "Кодів не знайдено. Перевірте текст/фото та спробуйте ще раз.";
-      alStatus.className = "status-line err";
-      return;
-    }
-    alStatus.textContent = `Знайдено кодів: ${parsed.length}`;
-    alStatus.className = "status-line ok";
-    alReviewData = parsed;
-    renderAlReview();
-  });
- 
-  function renderAlReview(){
-    document.getElementById("alReviewWrap").style.display = "block";
-    document.querySelector("#overlayAddLabels .modal-actions").style.display = "none";
-    document.getElementById("alText").parentElement.style.display = "none";
-    document.querySelector("#overlayAddLabels .divider").style.display = "none";
-    document.querySelector("#overlayAddLabels .method-grid").style.display = "none";
-    alThumbs.style.display = "none";
- 
-    const wrap = document.getElementById("alReviewList");
-    wrap.innerHTML = `<div id="alChips"></div>`;
-    const chips = document.getElementById("alChips");
-    renderChips();
-    function renderChips(){
-      chips.innerHTML = alReviewData.map((c,i) => `<span class="code-chip">${c.raw}<button class="rm" data-i="${i}">✕</button></span>`).join("");
-      chips.querySelectorAll(".rm").forEach(btn => {
-        btn.addEventListener("click", () => {
-          alReviewData.splice(Number(btn.dataset.i),1);
-          renderChips();
+            <!-- Input Form -->
+            <div class="p-3 bg-iosCard/90 border-t border-white/10 backdrop-blur-ios shrink-0">
+                <form onsubmit="handleSendPrompt(event)" class="space-y-2">
+                    <div class="relative">
+                        <textarea id="promptInput" rows="2" placeholder="Опишіть додаток або вкажіть правки..." class="w-full bg-iosCardSecondary text-white placeholder-slate-500 rounded-xl p-2.5 border border-white/10 text-xs outline-none focus:border-iosBlue resize-none"></textarea>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span id="statusLabel" class="text-[10px] text-slate-400 font-mono truncate max-w-[180px]">Готово</span>
+                        <button type="submit" id="sendBtn" class="bg-iosBlue active:bg-blue-600 text-white font-medium px-4 py-1.5 rounded-full text-xs transition flex items-center space-x-1.5 shrink-0">
+                            <i class="fa-solid fa-arrow-up text-xs"></i>
+                            <span>Надіслати</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- VIEW 2: SANDBOX (PREVIEW) -->
+        <div id="viewPreview" class="absolute inset-0 flex flex-col z-0 hidden bg-white w-full h-full">
+            <div class="h-8 bg-slate-900 border-b border-slate-800 flex justify-between items-center px-3 text-xs text-slate-300 shrink-0">
+                <span class="text-[11px] font-mono text-emerald-400 flex items-center space-x-1">
+                    <i class="fa-solid fa-circle text-[8px] animate-pulse"></i>
+                    <span>Live Sandbox</span>
+                </span>
+                <button onclick="reloadIframe()" class="p-1 text-slate-400 hover:text-white"><i class="fa-solid fa-rotate-right"></i></button>
+            </div>
+            <iframe id="sandboxIframe" class="w-full flex-1 border-0 bg-white" sandbox="allow-scripts allow-modals allow-forms allow-same-origin"></iframe>
+        </div>
+
+        <!-- VIEW 3: CODE VIEW -->
+        <div id="viewCode" class="absolute inset-0 flex flex-col z-0 hidden bg-slate-950 w-full h-full">
+            <div class="p-2 bg-iosCard border-b border-white/10 flex justify-between items-center shrink-0">
+                <span class="text-xs text-slate-400 font-mono">index.html</span>
+                <div class="flex space-x-2">
+                    <button onclick="copyCode()" class="bg-iosCardSecondary active:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-lg text-xs flex items-center space-x-1">
+                        <i class="fa-solid fa-copy"></i>
+                        <span>Копіювати</span>
+                    </button>
+                    <button onclick="downloadCode()" class="bg-iosBlue active:bg-blue-600 text-white px-2.5 py-1 rounded-lg text-xs flex items-center space-x-1">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Завантажити</span>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-auto p-3 text-[11px] font-mono w-full">
+                <pre><code id="codeViewer" class="language-xml"><!-- Код з'явиться тут --></code></pre>
+            </div>
+        </div>
+
+        <!-- VIEW 4: SESSIONS (PREVIOUS SESSIONS) -->
+        <div id="viewSessions" class="absolute inset-0 flex flex-col z-0 hidden bg-black p-3 overflow-y-auto w-full h-full">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Збережені сесії</h2>
+                <span class="text-[10px] text-slate-500">Видалення лише вручну</span>
+            </div>
+            <div id="sessionsList" class="space-y-2 w-full">
+                <!-- Dynamic sessions item list -->
+            </div>
+        </div>
+
+        <!-- VIEW 5: SETTINGS (API KEYS) -->
+        <div id="viewSettings" class="absolute inset-0 flex flex-col z-0 hidden bg-black p-4 overflow-y-auto w-full h-full">
+            <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">API Ключі Gemini (до 5 шт)</h2>
+            <div class="space-y-3 text-xs w-full">
+                <div class="bg-iosCard border border-white/10 rounded-xl p-3 space-y-2">
+                    <label class="block text-slate-300">Активний ключ:</label>
+                    <select id="activeKeySelect" onchange="switchActiveKeyIndex(this.value)" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono outline-none">
+                        <option value="0">Ключ #1</option>
+                        <option value="1">Ключ #2</option>
+                        <option value="2">Ключ #3</option>
+                        <option value="3">Ключ #4</option>
+                        <option value="4">Ключ #5</option>
+                    </select>
+                </div>
+
+                <div class="bg-iosCard border border-white/10 rounded-xl p-3 space-y-2">
+                    <span class="text-slate-400 text-[11px] block">Введіть ваші Gemini API keys:</span>
+                    <input type="password" id="key0" placeholder="API Key 1" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
+                    <input type="password" id="key1" placeholder="API Key 2" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
+                    <input type="password" id="key2" placeholder="API Key 3" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
+                    <input type="password" id="key3" placeholder="API Key 4" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
+                    <input type="password" id="key4" placeholder="API Key 5" class="w-full bg-iosCardSecondary text-white border border-white/10 rounded-lg p-2 font-mono text-xs outline-none">
+                    
+                    <button onclick="saveApiKeys()" class="w-full bg-iosBlue active:bg-blue-600 text-white py-2.5 rounded-lg font-medium transition mt-2 text-xs">
+                        Зберегти ключі
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom iOS Tab Bar -->
+    <nav class="pb-safe bg-iosCard/95 backdrop-blur-ios border-t border-white/10 flex justify-around items-center shrink-0 z-40 px-1 h-16">
+        <button onclick="switchTab('chat')" id="navChat" class="flex flex-col items-center justify-center w-full h-full text-iosBlue">
+            <i class="fa-solid fa-message text-base mb-0.5"></i>
+            <span class="text-[10px] font-medium">Чат</span>
+        </button>
+        <button onclick="switchTab('preview')" id="navPreview" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300">
+            <i class="fa-solid fa-play text-base mb-0.5"></i>
+            <span class="text-[10px] font-medium">Пісочниця</span>
+        </button>
+        <button onclick="switchTab('code')" id="navCode" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300">
+            <i class="fa-solid fa-code text-base mb-0.5"></i>
+            <span class="text-[10px] font-medium">Код</span>
+        </button>
+        <button onclick="switchTab('sessions')" id="navSessions" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300">
+            <i class="fa-solid fa-box-archive text-base mb-0.5"></i>
+            <span class="text-[10px] font-medium">Сесії</span>
+        </button>
+        <button onclick="switchTab('settings')" id="navSettings" class="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300">
+            <i class="fa-solid fa-gear text-base mb-0.5"></i>
+            <span class="text-[10px] font-medium">Ключі</span>
+        </button>
+    </nav>
+
+    <!-- Application Script -->
+    <script>
+        let apiKeys = ['', '', '', '', ''];
+        let activeKeyIndex = 0;
+        let sessions = [];
+        let currentSessionId = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadApiKeys();
+            loadSessions();
+            if (sessions.length > 0) {
+                loadSession(sessions[0].id);
+            } else {
+                createNewSession();
+            }
         });
-      });
-    }
-  }
- 
-  document.getElementById("alBack").addEventListener("click", () => resetAddLabelsModal());
- 
-  document.getElementById("alSaveAll").addEventListener("click", async () => {
-    const existingDigits = new Set(state.labels.map(l => l.digits));
-    const inserts = [];
-    alReviewData.forEach(c => {
-      if(existingDigits.has(c.digits)) return;
-      inserts.push(insertTrackerRow('label', { raw: c.raw, digits: c.digits }));
-      existingDigits.add(c.digits);
-    });
-    const results = await Promise.all(inserts);
-    overlayAddLabels.classList.remove("open");
-    if(results.some(r => !r)) alert('Частину етикеток не вдалося зберегти на сервері.');
-    syncTrackerFromServer();
-  });
- 
-  // ---------- INIT ----------
-  syncTrackerFromServer();
-  setInterval(renderNewOrders, 30000);
-  sb.channel('tracker-changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, function () { syncTrackerFromServer(); })
-    .subscribe();
-})();
-</script>
 
-<script>
-/* ======================= МОДУЛЬ "HALE" ======================= */
-(function () {
-  "use strict";
+        function loadApiKeys() {
+            const saved = localStorage.getItem('gemini_ios_keys');
+            if (saved) {
+                try {
+                    apiKeys = JSON.parse(saved);
+                    for(let i=0; i<5; i++) {
+                        const input = document.getElementById(`key${i}`);
+                        if(input && apiKeys[i]) input.value = apiKeys[i];
+                    }
+                } catch(e){}
+            }
+            const activeIdx = localStorage.getItem('gemini_ios_active_key');
+            if(activeIdx !== null) {
+                activeKeyIndex = parseInt(activeIdx, 10);
+                document.getElementById('activeKeySelect').value = activeKeyIndex;
+            }
+        }
 
-  // Координати відповідають плану цехів. m: [назва, x, y, w, h, поворот?]
-  const DATA = {
-    Nowa: {
-      viewBox: [20, 215, 780, 860], font: 31, titleFont: 32,
-      frames: [
-        "M35 230 H642 V522 H35 Z",
-        "M35 522 H648 V553 H780 V660 H35 Z",
-        "M35 660 H780 V850 C780 960 730 1030 560 1060 C380 1085 120 1070 45 990 Z"
-      ],
-      walls: [],
-      titles: [["HALA 1", 122, 452], ["HALA 2", 722, 597], ["HALA 2a", 357, 778]],
-      m: [
-        ["S-110", 67, 248, 62, 135], ["J-126", 162, 247, 65, 133], ["S-99", 259, 250, 65, 133],
-        ["S-111", 451, 250, 62, 133], ["J-129", 547, 250, 62, 133],
-        ["S-113", 219, 453, 128, 55], ["J-121", 382, 453, 126, 55],
-        ["S-107", 72, 594, 128, 52],
-        ["J-115", 241, 557, 128, 55, -62], ["J-122", 316, 553, 128, 55, -62],
-        ["J-116", 391, 551, 128, 55, -62], ["J-125", 476, 556, 128, 55, -62],
-        ["J-117", 75, 674, 126, 56], ["S-103", 295, 680, 124, 54],
-        ["J-118", 447, 678, 126, 54], ["S-102", 622, 680, 126, 54],
-        ["J-130", 77, 781, 124, 56], ["S-109", 449, 776, 124, 54], ["J-119", 622, 775, 124, 54]
-      ]
-    },
-    Stara: {
-      viewBox: [1135, 225, 1010, 460], font: 29, titleFont: 32,
-      frames: [
-        "M1143 232 H1517 V596 H1143 Z",
-        "M1517 232 H1960 V596 H1517 Z",
-        "M1960 232 H2138 V596 H1960 Z"
-      ],
-      walls: [
-        "M1430 235 V415", "M1567 505 V596", "M1567 505 H1960",
-        "M1657 505 V596", "M1810 505 V596", "M1903 505 V596",
-        "M1520 290 H1560 V335 H1530"
-      ],
-      titles: [["HALA 7a", 1213, 515], ["HALA 7b", 1697, 448], ["HALA 7c", 2048, 645]],
-      m: [
-        ["S-63", 1247, 272, 130, 55, 30], ["S-104", 1247, 377, 130, 55, 30],
-        ["S-108", 1682, 285, 45, 98], ["V-85", 1754, 245, 45, 135],
-        ["S-98", 1827, 246, 45, 135], ["S-101", 1899, 250, 45, 132],
-        ["S-100", 1817, 447, 128, 45],
-        ["V-93", 1978, 250, 42, 115], ["V-71", 2082, 250, 40, 100],
-        ["V-95", 2017, 398, 103, 48], ["V-94", 2017, 455, 103, 34],
-        ["V-80", 2017, 499, 103, 34], ["V-79", 2017, 543, 103, 34]
-      ]
-    },
-    Nisky: {
-      viewBox: [25, 1070, 1260, 400], font: 36, titleFont: 38,
-      frames: ["M35 1458 V1218 L155 1082 H1267 V1458 Z"],
-      walls: ["M208 1118 H368 V1228 H208 Z", "M438 1112 H586 V1220 H438 Z", "M205 1228 V1455"],
-      titles: [["HALA 4", 695, 1135]],
-      m: [
-        ["S-105", 220, 1280, 75, 160], ["S-114", 302, 1278, 75, 160],
-        ["S-112", 385, 1275, 75, 160], ["J-127", 465, 1273, 75, 160],
-        ["S-97", 547, 1272, 75, 160], ["S-96", 628, 1270, 75, 160],
-        ["J-120", 710, 1267, 75, 160], ["S-131", 790, 1205, 73, 215],
-        ["S-128", 951, 1198, 70, 215], ["S-106", 1030, 1235, 70, 215],
-        ["J-124", 1110, 1195, 70, 215], ["S-123", 1190, 1192, 70, 215]
-      ]
-    }
-  };
+        function saveApiKeys() {
+            for(let i=0; i<5; i++) {
+                apiKeys[i] = document.getElementById(`key${i}`).value.trim();
+            }
+            localStorage.setItem('gemini_ios_keys', JSON.stringify(apiKeys));
+            setStatus('Ключі збережено');
+            alert('API ключі збережено!');
+        }
 
-  // "S-110", "S110W", "S 110P" -> "S110": єдиний ключ для зв'язку схеми з даними вкладок.
-  function keyOf(s) {
-    const m = String(s || "").match(/([A-Za-z])\s*-?\s*(\d{2,4})/);
-    return m ? (m[1] + m[2]).toUpperCase() : null;
-  }
-  function esc(s) {
-    return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  }
-  function pad(n) { return n < 10 ? "0" + n : "" + n; }
-  function fmtDur(sec) {
-    if (sec <= 0) return "00:00:00";
-    const s = Math.floor(sec), d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600),
-          mi = Math.floor((s % 3600) / 60), se = s % 60;
-    return (d > 0 ? d + "д " : "") + pad(h) + ":" + pad(mi) + ":" + pad(se);
-  }
-  function fmtDT(d) {
-    return pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." + d.getFullYear() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
-  }
-  const nf = new Intl.NumberFormat("ru-RU");
+        function switchActiveKeyIndex(val) {
+            activeKeyIndex = parseInt(val, 10);
+            localStorage.setItem('gemini_ios_active_key', activeKeyIndex);
+            setStatus(`Активний Ключ #${activeKeyIndex + 1}`);
+        }
 
-  function build(d) {
-    let out = "";
-    d.frames.forEach(p => out += `<path class="hl-frame" d="${p}"/>`);
-    d.walls.forEach(p => out += `<path class="hl-wall" d="${p}"/>`);
-    d.titles.forEach(([t, x, y]) => out += `<text class="hl-title" style="font-size:${d.titleFont}px" x="${x}" y="${y}">${t}</text>`);
-    d.m.forEach(([n, x, y, w, h, r]) => {
-      const cx = x + w / 2, cy = y + h / 2;
-      const vertical = h > w * 1.3;
-      const fs = Math.min(d.font, (vertical ? w : h) * 0.72);
-      const tf = vertical ? ` transform="rotate(-90 ${cx} ${cy})"` : "";
-      const g = r ? ` transform="rotate(${r} ${cx} ${cy})"` : "";
-      out += `<g class="hl-m ${n[0]}" data-key="${keyOf(n)}" data-name="${n}"${g}>`
-           + `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="7"/>`
-           + `<text${tf} x="${cx}" y="${cy + 1}" style="font-size:${fs}px">${n}</text>`
-           + `<circle class="hl-dot" cx="${x + w - 10}" cy="${y + 10}" r="6.5"/></g>`;
-    });
-    const [vx, vy, vw, vh] = d.viewBox;
-    return `<svg viewBox="${vx} ${vy} ${vw} ${vh}" role="img" aria-label="Схема зал">${out}</svg>`;
-  }
+        function loadSessions() {
+            const saved = localStorage.getItem('gemini_ios_sessions');
+            if (saved) {
+                try {
+                    sessions = JSON.parse(saved);
+                } catch(e) { sessions = []; }
+            }
+            renderSessionsList();
+        }
 
-  const sub = document.getElementById("haleSub");
-  const views = document.getElementById("haleViews");
-  Object.keys(DATA).forEach((name, i) => {
-    const b = document.createElement("button");
-    b.type = "button"; b.textContent = name; b.dataset.v = name;
-    if (i === 0) b.classList.add("active");
-    sub.appendChild(b);
-    const v = document.createElement("div");
-    v.className = "hl-view" + (i === 0 ? " active" : "");
-    v.dataset.v = name;
-    v.innerHTML = build(DATA[name]);
-    views.appendChild(v);
-  });
-  sub.addEventListener("click", (e) => {
-    const b = e.target.closest("button[data-v]");
-    if (!b) return;
-    sub.querySelectorAll("button").forEach(x => x.classList.toggle("active", x === b));
-    views.querySelectorAll(".hl-view").forEach(x => x.classList.toggle("active", x.dataset.v === b.dataset.v));
-  });
+        function saveSessions() {
+            localStorage.setItem('gemini_ios_sessions', JSON.stringify(sessions));
+            renderSessionsList();
+        }
 
-  // ---------- Зелений індикатор: машина зараз у вкладці "Злиття" (є незавершена картка) ----------
-  function activeKeys() {
-    const zl = window.__zlGet ? window.__zlGet() : [];
-    const set = new Set();
-    zl.forEach(x => { if (x.c.remainingPieces > 0) set.add(keyOf(x.m.machine)); });
-    return set;
-  }
-  function updateLive() {
-    const act = activeKeys();
-    const st = window.__trGet ? window.__trGet() : { orders: [], newOrders: [], labels: [] };
-    const zl = window.__zlGet ? window.__zlGet() : [];
-    const info = new Set();
-    zl.forEach(x => info.add(keyOf(x.m.machine)));
-    st.newOrders.forEach(o => info.add(keyOf(o.machine)));
-    st.orders.forEach(o => info.add(keyOf(o.machine)));
-    st.labels.forEach(l => (l.matchedMachines || []).forEach(mm => info.add(keyOf(mm))));
-    const inProgress = new Set();
-    st.newOrders.forEach(o => { const k = keyOf(o.machine); if (k) inProgress.add(k); });
-    views.querySelectorAll(".hl-m").forEach(g => {
-      g.classList.toggle("live", act.has(g.dataset.key));
-      g.classList.toggle("has-info", info.has(g.dataset.key));
-      g.classList.toggle("working", inProgress.has(g.dataset.key));
-    });
-    const c = document.getElementById("haleCount");
-    if (c) c.textContent = "Машин у ході: " + inProgress.size;
-  }
+        function createNewSession() {
+            const newId = 'session_' + Date.now();
+            const newSession = {
+                id: newId,
+                title: 'Новий проект (' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ')',
+                code: '',
+                history: []
+            };
+            sessions.unshift(newSession);
+            saveSessions();
+            loadSession(newId);
+            switchTab('chat');
+        }
 
-  // ---------- Панель з усією інформацією по машині ----------
-  const overlay = document.getElementById("overlayHale");
-  const modal = document.getElementById("haleModal");
-  let openKey = null, openName = "", lastHtml = "";
+        function loadSession(id) {
+            currentSessionId = id;
+            const session = sessions.find(s => s.id === id);
+            if (!session) return;
 
-  // Сортування за датою початку: майбутні/сьогоднішні зростаюче, минулі - в кінець, без дати - в самий кінець.
-  function dateVal(str) {
-    const m = String(str || "").trim().match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
-    return m ? new Date(+m[3], +m[2] - 1, +m[1]).getTime() : null;
-  }
-  function todayStart() { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
-  function isPast(str) { const v = dateVal(str); return v !== null && v < todayStart(); }
-  function sortByDate(arr, get) {
-    const t = todayStart();
-    const rank = x => { const v = dateVal(get(x)); return v === null ? [2, 0] : (v >= t ? [0, v] : [1, -v]); };
-    return arr.slice().sort((a, b) => { const ra = rank(a), rb = rank(b); return (ra[0] - rb[0]) || (ra[1] - rb[1]); });
-  }
-  const expanded = new Set();
+            document.getElementById('headerTitle').innerText = session.title;
+            document.getElementById('sessionStatusLabel').innerText = session.title;
 
-  function delBtn(kind, id) {
-    return `<div class="hl-xrow"><button class="hl-x" data-act="del" data-kind="${kind}" data-id="${esc(id)}" type="button" title="Видалити">✕</button></div>`;
-  }
-  function kv(k, v) {
-    if (v === "" || v == null) return "";
-    return `<div class="hl-kv"><span>${k}</span><span>${esc(v)}</span></div>`;
-  }
+            const chatBox = document.getElementById('chatMessages');
+            chatBox.innerHTML = `
+                <div class="bg-iosCard border border-white/5 rounded-2xl p-3 text-xs text-slate-300 space-y-2">
+                    <div class="font-semibold text-iosBlue flex items-center space-x-1.5">
+                        <i class="fa-solid fa-robot"></i>
+                        <span>ШІ Контекст-Асистент</span>
+                    </div>
+                    <p class="text-slate-400 text-[11px]">Ви розробляєте: <b>${session.title}</b>. Кожен запит вносить правки в поточний код.</p>
+                </div>
+            `;
 
-  function renderInfo() {
-    if (!openKey) return;
-    const zl = (window.__zlGet ? window.__zlGet() : []).filter(x => keyOf(x.m.machine) === openKey);
-    const st = window.__trGet ? window.__trGet() : { orders: [], newOrders: [], labels: [] };
-    const newOrders = st.newOrders.filter(o => keyOf(o.machine) === openKey);
-    const orders = st.orders.filter(o => keyOf(o.machine) === openKey);
-    const labels = st.labels.filter(l => (l.matchedMachines || []).some(mm => keyOf(mm) === openKey));
-    const live = zl.some(x => x.c.remainingPieces > 0);
-    const stLabel = { done: "Готово", danger: "Терміново", warn: "Скоро", ok: "В роботі" };
+            session.history.forEach(m => appendMessageUI(m.role, m.text));
+            updateSandboxAndCode(session.code);
+            renderSessionsList();
+        }
 
-    let h = `<div class="hl-head"><h2>${esc(openName)}</h2>${live ? '<span class="hl-live">У ЗЛИТТІ</span>' : ''}
-      <button class="hl-close" data-act="close" type="button">✕</button></div>`;
+        function deleteSession(id, e) {
+            e.stopPropagation();
+            if (!confirm('Видалити цю сесію безповоротно?')) return;
+            sessions = sessions.filter(s => s.id !== id);
+            saveSessions();
+            if (currentSessionId === id) {
+                if (sessions.length > 0) loadSession(sessions[0].id);
+                else createNewSession();
+            }
+        }
 
-    // Злиття
-    h += `<div class="hl-sec"><div class="hl-sec-title"><span>Злиття</span><span>${zl.length}</span></div>`;
-    if (!zl.length) h += `<div class="hl-empty">Немає активних карток злиття.</div>`;
-    zl.forEach(x => {
-      const m = x.m, c = x.c;
-      h += `<div class="hl-item zl">
-        <div class="hl-big">${fmtDur(c.remainingSeconds)}</div>
-        ${kv("Статус", stLabel[x.st])}
-        ${kv("Лишилось шт", nf.format(c.remainingPieces))}
-        ${kv("Зроблено / всього", nf.format(c.done) + " / " + nf.format(m.total))}
-        ${kv("Кінець злиття", fmtDT(c.finishDate))}
-        ${kv("Незаконч. палета", "№" + m.palletNum + " · " + m.onCurrent + "/" + m.perPallet + " шт")}
-        ${kv("Цикл", String(m.cycle).replace(".", ",") + " с")}
-        ${kv("Злиття №", m.zlittyaNum)}
-        ${kv("Етикетка №", m.etiketkaNum)}
-        ${delBtn("zl", m.id)}
-      </div>`;
-    });
-    h += `</div>`;
+        function renderSessionsList() {
+            const container = document.getElementById('sessionsList');
+            if (sessions.length === 0) {
+                container.innerHTML = '<div class="text-xs text-slate-500 p-2">Немає збережених сесій</div>';
+                return;
+            }
+            container.innerHTML = sessions.map(s => `
+                <div onclick="loadSession('${s.id}')" class="p-3 rounded-xl border ${s.id === currentSessionId ? 'bg-iosCard border-iosBlue' : 'bg-iosCardSecondary border-white/5'} flex justify-between items-center cursor-pointer hover:border-slate-600 transition">
+                    <div class="overflow-hidden mr-2">
+                        <div class="text-xs font-medium text-slate-100 truncate">${s.title}</div>
+                        <div class="text-[10px] text-slate-500">${s.history.length} повідомлень</div>
+                    </div>
+                    <button onclick="deleteSession('${s.id}', event)" class="text-slate-500 hover:text-iosRed p-2 text-xs">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
 
-    // Нові зліценія (заявка показується тільки при натисканні на конкретне зліценіє)
-    const numOf = x => (x.numerZlecenia || "").trim();
-    const orderFor = no => { const n = numOf(no); return n ? st.orders.find(o => numOf(o) === n) : null; };
-    const sortedNo = sortByDate(newOrders, o => o.date);
-    h += `<div class="hl-sec"><div class="hl-sec-title"><span>Нові зліценія</span><span>${newOrders.length}</span></div>`;
-    if (!newOrders.length) h += `<div class="hl-empty">Немає.</div>`;
-    sortedNo.forEach(o => {
-      const ord = orderFor(o);
-      const open = expanded.has(String(o.id));
-      const code = o.labelCode && o.labelCode.trim();
-      h += `<div class="hl-card ${isPast(o.date) ? 'past' : ''}" data-id="${esc(o.id)}">
-        <div class="hl-card-head"><span class="hl-num">${esc(o.numerZlecenia || "без номера")}</span>
-          ${isPast(o.date) ? '<span class="hl-chip r hl-overdue">ПРОСТРОЧЕНО</span>' : ''}
-          <button class="hl-x" data-act="del" data-kind="no" data-id="${esc(o.id)}" type="button" title="Видалити">✕</button></div>
-        ${kv("Дата початку", o.date)}
-        ${kv("Ilość na zleceniu", o.ilosc)}
-        <div class="hl-kv"><span>Код етикетки</span>${code ? `<span class="hl-label">${esc(code)}</span>` : `<span>невідомий</span>`}</div>
-        <div class="hl-brought"><span>Етикетку принесено</span>
-          <div class="oc-brought-switch ${ord && ord.labelBrought ? 'on' : ''} ${ord ? '' : 'dis'}" data-act="brought" data-oid="${ord ? esc(ord.id) : ''}"></div></div>`;
-      if (!open) {
-        h += `<div class="hl-hint">Натисніть, щоб побачити заявку</div>`;
-      } else if (ord) {
-        h += `<div class="hl-detail">
-          ${kv("Дата початку", ord.dateEff || ord.date)}
-          ${kv("Numer katalogowy", ord.nrKatalogowy)}
-          ${kv("Nazwa", ord.nazwaProduktu)}
-          ${kv("Uwagi do zlecenia", ord.uwagiZlecenia)}
-          ${kv("Ilość", ord.iloscNaZleceniu)}
-          <span class="hl-chip ${ord.matched ? 'g' : 'r'}">${ord.matched ? "Етикетка знайдена" : "Очікує етикетку"}</span>
-          ${delBtn("ord", ord.id)}
-        </div>`;
-      } else {
-        h += `<div class="hl-detail"><div class="hl-empty">Заявку з таким номером ще не додано.</div></div>`;
-      }
-      h += `</div>`;
-    });
-    h += `</div>`;
+        function switchTab(tab) {
+            const views = {
+                chat: document.getElementById('viewChat'),
+                preview: document.getElementById('viewPreview'),
+                code: document.getElementById('viewCode'),
+                sessions: document.getElementById('viewSessions'),
+                settings: document.getElementById('viewSettings')
+            };
+            const navs = {
+                chat: document.getElementById('navChat'),
+                preview: document.getElementById('navPreview'),
+                code: document.getElementById('navCode'),
+                sessions: document.getElementById('navSessions'),
+                settings: document.getElementById('navSettings')
+            };
 
-    // Заявки цієї машини, які не прив'язані до її зліценій
-    const myNums = new Set(newOrders.map(numOf).filter(Boolean));
-    const loose = sortByDate(orders.filter(o => !myNums.has(numOf(o))), o => o.dateEff || o.date);
-    if (loose.length) {
-      h += `<div class="hl-sec"><div class="hl-sec-title"><span>Заявки без зліценія</span><span>${loose.length}</span></div>`;
-      loose.forEach(o => {
-        h += `<div class="hl-item ${o.matched ? 'ok' : ''}">
-          ${kv("Numer zlecenia", o.numerZlecenia)}
-          ${kv("Дата початку", o.dateEff || o.date)}
-          ${kv("Numer katalogowy", o.nrKatalogowy)}
-          ${kv("Nazwa", o.nazwaProduktu)}
-          ${kv("Код етикетки", o.labelCode)}
-          ${kv("Uwagi do zlecenia", o.uwagiZlecenia)}
-          ${kv("Ilość", o.iloscNaZleceniu)}
-          <span class="hl-chip ${o.matched ? 'g' : 'r'}">${o.matched ? "Етикетка знайдена" : "Очікує етикетку"}</span>
-          <span class="hl-chip ${o.labelBrought ? 'g' : ''}">${o.labelBrought ? "Принесено" : "Не принесено"}</span>
-          ${delBtn("ord", o.id)}
-        </div>`;
-      });
-      h += `</div>`;
-    }
+            Object.keys(views).forEach(k => {
+                if (k === tab) {
+                    views[k].classList.remove('hidden');
+                    views[k].classList.add('z-10');
+                    navs[k].className = "flex flex-col items-center justify-center w-full h-full text-iosBlue";
+                } else {
+                    views[k].classList.add('hidden');
+                    views[k].classList.remove('z-10');
+                    navs[k].className = "flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-slate-300";
+                }
+            });
+        }
 
-    // Етикетки
-    h += `<div class="hl-sec"><div class="hl-sec-title"><span>Етикетки</span><span>${labels.length}</span></div>`;
-    if (!labels.length) h += `<div class="hl-empty">Немає знайдених етикеток.</div>`;
-    labels.forEach(l => {
-      h += `<div class="hl-item lb">${kv("Код", l.raw)}
-        <span class="hl-chip ${l.brought ? 'g' : ''}">${l.brought ? "Принесено" : "Не принесено"}</span>
-        ${delBtn("lb", l.id)}</div>`;
-    });
-    h += `</div>`;
+        function setTemplate(txt) {
+            document.getElementById('promptInput').value = txt;
+        }
 
-    if (h !== lastHtml) { modal.innerHTML = h; lastHtml = h; }
-  }
+        function setStatus(msg, isErr = false) {
+            const label = document.getElementById('statusLabel');
+            label.innerText = msg;
+            label.className = `text-[10px] font-mono truncate ${isErr ? 'text-iosRed' : 'text-slate-400'}`;
+        }
 
-  function openInfo(key, name) {
-    openKey = key; openName = name; lastHtml = "";
-    renderInfo();
-    modal.scrollTop = 0;
-    overlay.classList.add("open");
-  }
-  function closeInfo() { openKey = null; overlay.classList.remove("open"); }
+        async function handleSendPrompt(e) {
+            e.preventDefault();
+            const input = document.getElementById('promptInput');
+            const prompt = input.value.trim();
+            if (!prompt) return;
 
-  views.addEventListener("click", (e) => {
-    const g = e.target.closest(".hl-m");
-    if (g) openInfo(g.dataset.key, g.dataset.name);
-  });
-  overlay.addEventListener("click", async (e) => {
-    if (e.target === overlay || e.target.closest("[data-act=close]")) { closeInfo(); return; }
-    const sw = e.target.closest("[data-act=brought]");
-    if (sw) {
-      if (!sw.dataset.oid) return;
-      sw.classList.toggle("on");
-      await window.__trToggleBrought(sw.dataset.oid);
-      lastHtml = ""; renderInfo();
-      return;
-    }
-    const b = e.target.closest("[data-act=del]");
-    if (b) {
-      const names = { zl: "картку злиття", no: "зліценіє", ord: "заявку", lb: "етикетку" };
-      if (!confirm("Видалити " + names[b.dataset.kind] + "? Запис зникне і у відповідній вкладці.")) return;
-      const id = b.dataset.id;
-      if (b.dataset.kind === "zl") await window.__zlDelete(id);
-      else await window.__trDelete(id);
-      lastHtml = ""; renderInfo(); updateLive();
-      return;
-    }
-    const card = e.target.closest(".hl-card");
-    if (card && !e.target.closest(".hl-detail")) {
-      const id = card.dataset.id;
-      if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
-      lastHtml = ""; renderInfo();
-    }
-  });
+            const apiKey = apiKeys[activeKeyIndex];
+            if (!apiKey) {
+                alert(`API Ключ #${activeKeyIndex + 1} не вказано! Перейдіть у вкладку 'Ключі'.`);
+                switchTab('settings');
+                return;
+            }
 
-  setInterval(function () { updateLive(); if (openKey) renderInfo(); }, 1000);
-  updateLive();
-})();
+            const session = sessions.find(s => s.id === currentSessionId);
+            if (!session) return;
 
-</script>
+            if (session.history.length === 0) {
+                session.title = prompt.length > 25 ? prompt.substring(0, 25) + '...' : prompt;
+                document.getElementById('headerTitle').innerText = session.title;
+            }
+
+            appendMessageUI('user', prompt);
+            session.history.push({ role: 'user', text: prompt });
+            input.value = '';
+            setStatus('Генерація коду...');
+
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = true;
+
+            const model = document.getElementById('modelSelect').value;
+
+            let systemContext = `Ти — розробник веб-додатків. Твоє завдання — згенерувати АБО оновити вебдодаток в ОДНОМУ автономному файлі HTML.
+Повертай ТІЛЬКИ чистий HTML-код з CSS та JS.`;
+
+            if (session.code) {
+                systemContext += `\n\nПОПЕРЕДНЯ ВЕРСІЯ КОДУ:\n\`\`\`html\n${session.code}\n\`\`\`\n\nВНЕСИ ЗМІНИ/ПРАВКИ В ЦЕЙ КОД ВІДПОВІДНО ДО НОВОГО ЗАПИТУ КОРИСТУВАЧА.`;
+            }
+
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [
+                            { role: 'user', parts: [{ text: `${systemContext}\n\nЗапит: ${prompt}` }] }
+                        ]
+                    })
+                });
+
+                if (!res.ok) {
+                    if (res.status === 429) throw new Error('Ліміт 429! Переключіть ключ');
+                    throw new Error(`Помилка (${res.status})`);
+                }
+
+                const data = await res.json();
+                let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                let newCode = rawText.replace(/```html/gi, '').replace(/```/g, '').trim();
+
+                session.code = newCode;
+                session.history.push({ role: 'ai', text: 'Код успішно оновлено!' });
+                saveSessions();
+
+                appendMessageUI('ai', 'Додаток оновлено! Перейдіть у "Пісочницю" для перегляду.');
+                updateSandboxAndCode(newCode);
+                setStatus('Успішно оновлено');
+
+            } catch (err) {
+                setStatus(err.message, true);
+                appendMessageUI('ai', 'Помилка: ' + err.message);
+            } finally {
+                sendBtn.disabled = false;
+            }
+        }
+
+        function appendMessageUI(role, text) {
+            const box = document.getElementById('chatMessages');
+            const msg = document.createElement('div');
+            msg.className = `p-2.5 rounded-xl text-xs ${role === 'user' ? 'bg-iosBlue/20 border border-iosBlue/30 text-blue-100 ml-4' : 'bg-iosCardSecondary border border-white/10 text-slate-200 mr-4'}`;
+            msg.innerHTML = `<div class="font-semibold text-[10px] mb-0.5 ${role === 'user' ? 'text-iosBlue' : 'text-purple-400'}">${role === 'user' ? 'Ви' : 'ШІ'}</div><div>${text}</div>`;
+            box.appendChild(msg);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function updateSandboxAndCode(code) {
+            const iframe = document.getElementById('sandboxIframe');
+            iframe.srcdoc = code || '';
+
+            const viewer = document.getElementById('codeViewer');
+            viewer.textContent = code || '<!-- Немає коду -->';
+            hljs.highlightElement(viewer);
+        }
+
+        function reloadIframe() {
+            const session = sessions.find(s => s.id === currentSessionId);
+            if (session && session.code) updateSandboxAndCode(session.code);
+        }
+
+        function copyCode() {
+            const session = sessions.find(s => s.id === currentSessionId);
+            if (!session || !session.code) return;
+            navigator.clipboard.writeText(session.code);
+            alert('Код скопійовано!');
+        }
+
+        function downloadCode() {
+            const session = sessions.find(s => s.id === currentSessionId);
+            if (!session || !session.code) return;
+            const blob = new Blob([session.code], { type: 'text/html' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'index.html';
+            a.click();
+        }
+    </script>
 </body>
 </html>
+
+Скопіюйте цей файл заново у свій GitHub-репозиторій і перевірте на телефоні — тепер додаток розгортається на весь екран без зсувів.
